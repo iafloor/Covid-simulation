@@ -4,6 +4,7 @@ import sys
 from Network import *
 from Read_data import *
 from Classes import *
+from Parameters import *
 
 
 def initialise_infection(parameters, people, tracker_changes):
@@ -28,6 +29,7 @@ def initialise_infection(parameters, people, tracker_changes):
 
 
 def initialise_vaccination(parameters, order, tracker_changes):
+    "This function will reconstruct the vaccination of people in the past 6 months"
     # Initializes a fraction of to population with a vaccination
     new_status_changes = tracker_changes
 
@@ -122,8 +124,18 @@ def initialise_model(parameters, files, order_type, tracker_changes):
 
     return data, contact_matrix, tracker_changes, currentPopulation
 
+def infectChance(population) :
+    """ This function calculates the chance that someone will get infect.
+     This is based on a couple factors:
+     - if there is someone infected in their household or schoolclass
+     - their age
+     - if they are vaccinated (and how long ago)
+     - if they have been infected before
+     - the random chance to get COVID by the polymod"""
+    return population
 
-def infect_cohabitants(parameters, population, tracker_changes):
+
+def infect_cohabitants(parameters,population, tracker_changes):
     # Method of infection for people in the same house.
     # todo needs to made faster with a sparse matrix instead of looking up everyones household. Also for further work.
 
@@ -137,7 +149,7 @@ def infect_cohabitants(parameters, population, tracker_changes):
                 infected.append(j)
 
     for j in infected:
-        members = j.household.members
+        members = population.houseDict[j.household].members
         cohabitants = [members[i] for i in range(len(members)) if members[i] != j]
         for cohab in cohabitants:
             if rd.random() < parameters["P_COHAB"]:
@@ -326,7 +338,6 @@ def vaccinate(population, status_changes):
             new_status_changes["vaccinated"] += 1
 
     return new_status_changes, population
-
 
 def run_model(population, parameters, data, contact_matrix, tracker, timesteps, start_vaccination=0):
     # Function for running the model. It wraps the vaccinate, infection and update functions

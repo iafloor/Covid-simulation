@@ -197,11 +197,19 @@ class age_group(group):
         super().__init__(age_group_id)
 
     
-# we create classes (actual schoolclasses) they contain an id and their ages
-class school_group(group) :
+#  classes (actual schoolclasses) they contain an id and their ages
+class schoolGroup(group) :
     def __init__(self, schoolGroupID, ages):
         self.schoolGroupID = schoolGroupID
         self.ages = ages
+
+class retirementHome(household) :
+    def __init__(self, retirementHomeID):
+        self.retirementHomeID = retirementHomeID
+
+class studentHouse(household) :
+    def __init__(self, studentHouseID):
+        self.studentHouseID = studentHouseID
 
 
 # create class for population
