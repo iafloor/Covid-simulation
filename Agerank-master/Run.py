@@ -7,9 +7,9 @@ from Model import model
 from Parameters import parameter
 
 # timesteps to simulate the model for
-timesteps = 400
+timesteps = 4
 # the amout of times the same model has to be ran
-k = 100
+k = 1
 # the type of order for the vaccination
 vaccination_orders = [1]
 # the names for the datasets to be saved

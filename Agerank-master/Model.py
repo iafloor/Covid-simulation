@@ -91,8 +91,7 @@ def initialise_model(parameters, files, order_type, tracker_changes):
 
     # Read the file containing data about contacts longer then 15 minutes
     print("Creating age group contact distribution.")
-    contact_data = read_contact_data(data, files["Polymod_participants_dataset"], files["Polymod_contacts_dataset"],
-                                     parameters["PERIOD"])
+    contact_data = read_contact_data(data, files["Polymod_participants_dataset"], files["Polymod_contacts_dataset"], parameters["PERIOD"])
 
     # create population
     print("Creating a population")

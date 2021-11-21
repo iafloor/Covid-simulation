@@ -136,7 +136,7 @@ class track_statistics(object):
 
 
 class person(object):
-    def __init__(self, person_id, age, status=SUSCEPTIBLE, vaccination_readiness=True, days_since_infection=0):
+    def __init__(self, person_id, age, status=SUSCEPTIBLE, vaccination_readiness=True, days_since_infection=0, dontVaccme=False):
         self.person_id = person_id  # corresponds to the index within the adjacency matrix
         self.age = age  # age of the person
         self.status = status  #
@@ -144,6 +144,7 @@ class person(object):
         self.vaccination_readiness = vaccination_readiness
         self.household = 0
         self.overestimate = {}
+        self.dontVaccme = dontVaccme
 
     def overestimation(self, inp):
         if inp in self.overestimate.keys():
@@ -166,8 +167,10 @@ class person(object):
 
 
 # group is an abstract class with subclasses household and agegroup
+# groups have a group id, members and a number of infected people in the group. We start with 0 infections
 class group(object):
-    def __init__(self, group_id):
+    def __init__(self, group_id, infected=0):
+        self.id = infected
         self.id = group_id
         self.members = []
 
@@ -192,6 +195,13 @@ class age_group(group):
         self.ages = self.ages_in_group(from_age, to_age)
         self.age_group_id = age_group_id
         super().__init__(age_group_id)
+
+    
+# we create classes (actual schoolclasses) they contain an id and their ages
+class school_group(group) :
+    def __init__(self, schoolGroupID, ages):
+        self.schoolGroupID = schoolGroupID
+        self.ages = ages
 
 
 # create class for population

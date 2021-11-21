@@ -50,29 +50,42 @@ DAY_RECOVERY = 13  # day of possible recovery, or hospitalisation
 DAY_RELEASE = 20  # day of release from hospital, or death
 
 # Vaccination parameters
-VACC0 = 0.155  # fraction of vaccination at time 0
-# based on 2.2 million first doses in NL for an adult
-# population of 14.1 million.
-BETA0 = 0.0  # fraction of young among the vaccinated persons at time 0
-# These might be young care workers and hospital staff
-# For now, neglected. The others are assumed to be the oldest.
-VACC = 0.005  # fraction of the population vaccinated per day.
-# The vaccination is assumed to have immediate effect, modelling
-# receiving the shot two weeks earlier.
-# Only susceptible persons are vaccinated.
-# The order is by increasing index (young to old)
-# for the fraction BETA, and old to young for the fraction 1-BETA.
-# The value is based on 100000 first doses per day.
-STARTAGE = 18  # starting age of the vaccination, country dependent (NL 18, IL 16)
-# Other parameters.
-PERIOD = 6  # number of days for which the contacts are the same group.
-# It must be between 1 (all monthly contacts are with different
-# persons, # and 30 (all monthly contacts are with the same person).
-# A period of 6 seems a good compromise.
-RATIO_HF = 3  # ratio between number of admissions to the hospital
-# and the number of fatalities (ratio must be >=1)
-# this does not influence the simulation, as the age-dependence
-# of hospitalisation has been modelled through the fatality rate.
+VACC0 = 0.155   # fraction of vaccination at time 0
+                # based on 2.2 million first doses in NL for an adult
+                # population of 14.1 million.
+BETA0 = 0.0     # fraction of young among the vaccinated persons at time 0
+                # These might be young care workers and hospital staff
+                # For now, neglected. The others are assumed to be the oldest.
+VACC = 0.005    # fraction of the population vaccinated per day.
+                # The vaccination is assumed to have immediate effect, modelling
+                # receiving the shot two weeks earlier.
+                # Only susceptible persons are vaccinated.
+                # The order is by increasing index (young to old)
+                # for the fraction BETA, and old to young for the fraction 1-BETA.
+                # The value is based on 100000 first doses per day.
+STARTAGE = 12   # starting age of the vaccination, country dependent (NL 18, IL 16)
+                # Other parameters.
+PERIOD = 6      # number of days for which the contacts are the same group.
+                # It must be between 1 (all monthly contacts are with different
+                # persons, # and 30 (all monthly contacts are with the same person).
+                # A period of 6 seems a good compromise.
+RATIO_HF = 3    # ratio between number of admissions to the hospital
+                # and the number of fatalities (ratio must be >=1)
+                # this does not influence the simulation, as the age-dependence
+                # of hospitalisation has been modelled through the fatality rate.
+
+
+# vaccination parameters
+# 2 vaccinaties met 28 dagen ertussen
+# 
+
+# parameters for creating groups
+KIDSINGROUP = 23 # based on the average number of kids in a class in primary school in 2018 in the Netherlands
+                 # for high school the numbers differ per educational attainment. The averages are at lest 13 and at most 26. I have choosen to 
+                 # still use the average of 23 for these groups.
+                 # https://www.rijksoverheid.nl/onderwerpen/basisonderwijs/vraag-en-antwoord/hoe-zijn-de-groepen-in-het-basisonderwijs-bo-samengesteld
+
+
 
 
 def parameter():
