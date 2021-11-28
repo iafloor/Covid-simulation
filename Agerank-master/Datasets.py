@@ -22,6 +22,8 @@ Household_makeup_dataset = os.path.join("Datafiles", "Huishoudens__samenstelling
 # Source: CBS, Statistics Netherlands, https://opendata.cbs.nl
 People_in_household_dataset = os.path.join("Datafiles", "Personen_in_huishoudens_naar_leeftijd_en_geslacht.csv")
 
+# source: RIVM, https://www.rivm.nl/covid-19-vaccinatie/cijfers-vaccinatieprogramma
+previouslyVaccinated = os.path.join("Datafiles", "vaccinatiegraad.csv")
 
 # now wrap everything into a dictionary for easy access:
 def filenames_dictionary():
@@ -31,4 +33,5 @@ def filenames_dictionary():
             "Polymod_participants_dataset": Polymod_participants_dataset,
             "Child_distribution_dataset": Child_distribution_dataset,
             "Household_makeup_dataset": Household_makeup_dataset,
-            "People_in_household_dataset": People_in_household_dataset}
+            "People_in_household_dataset": People_in_household_dataset,
+            "previouslyVaccinated" : previouslyVaccinated}

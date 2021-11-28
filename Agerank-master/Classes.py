@@ -136,15 +136,24 @@ class track_statistics(object):
 
 
 class person(object):
-    def __init__(self, person_id, age, status=SUSCEPTIBLE, vaccination_readiness=True, days_since_infection=0, dontVaccme=False):
+    def __init__(self, person_id, age, status=SUSCEPTIBLE, vaccinationReadiness=True, daysSinceInfection=0, weekOfVaccination=0,dontVaccme=False):
         self.person_id = person_id  # corresponds to the index within the adjacency matrix
         self.age = age  # age of the person
         self.status = status  #
-        self.days_since_infection = days_since_infection
-        self.vaccination_readiness = vaccination_readiness
+        self.daysSinceInfection = daysSinceInfection
+        self.weekOfVaccination = weekOfVaccination
+        self.vaccinationReadiness = vaccinationReadiness
         self.household = 0
+        self.schoolClass = -1
         self.overestimate = {}
         self.dontVaccme = dontVaccme
+        self.infectious = 0
+        self.quarantined = 0
+        self.hospitalised = 0
+        self.recovered = 0
+        self.vaccinated = 0
+        self.transmitter = 0
+        self.deceased = 0
 
     def overestimation(self, inp):
         if inp in self.overestimate.keys():
@@ -152,25 +161,11 @@ class person(object):
         else:
             self.overestimate[inp] = 1
 
-
-    def update_household(self, household):
-        self.household = household
-
-    def update_status(self, new_status):
-        self.status = new_status
-
-    def update_days_since_infection(self, new_days):
-        self.days_since_infection = new_days
-
-    def how_many_days(self):
-        return self.days_since_infection
-
-
 # group is an abstract class with subclasses household and agegroup
 # groups have a group id, members and a number of infected people in the group. We start with 0 infections
 class group(object):
     def __init__(self, group_id, infected=0):
-        self.id = infected
+        self.infected = infected
         self.id = group_id
         self.members = []
 

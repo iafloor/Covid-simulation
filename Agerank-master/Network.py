@@ -13,180 +13,148 @@ from Parameters import *
 
 
 def how_many_children(available_children):
-    #calculates how many children a family has. We check the maximum and choose a random number, if there are still households needed with that many kids we're done, else we choose another number
-    maxNumberOfChildren = len(available_children)
-    numberOfChildren = random.choice((range(0,maxNumberOfChildren)))
+    #calculates how many children a family has. We check the maximum and choose a random number,
+    # if there are still households needed with that many kids we're done, else we choose another number
+    maxNumberOfChildren: int = len(available_children)
+    numberOfChildren: int = random.choice((range(0,maxNumberOfChildren)))
     while(available_children[numberOfChildren] < 1) :
         numberOfChildren = random.choice((range(0,maxNumberOfChildren)))
     return numberOfChildren
 
 
-def couple_childless(population):
-    # ages of all the people living with 1 other person which is not their child
-    couples = list(population.amountPeople["Fraction couple without children"])
-    number_of_couples = int(sum(couples) / 2)
+def createCouples(population, couples, childrenless, childDist):
+    # rounding off error?
+    if childDist != 0 :
+        numberOfCouples = int(min(sum(couples)/2, sum(childDist)))
+    else :
+        numberOfCouples = int(sum(couples) / 2)
 
-    #  we use this parameter to keep track of the index of the first available age
-    popage = 19
     # calculate all ages available for the couples
     availableAges = {}
 
     # calculate the start age
     startage = 0;
-    while (couples[startage] < 1) :
+    while (couples[startage] < 1):
         startage += 1
 
-    for age in range(startage, len(couples)) :
+    for age in range(startage, len(couples)):
         availableAges[age] = couples[age]
 
-
-    #availableAges = {index for index in range(len(couples)) if couples[index] > 0}
-    #print(sum(couples))
-
     # we give all the couples an age
-    for couple in range(number_of_couples - 1):
-
+    for couple in range(numberOfCouples - 1):
+        members = []
         # pick the lowest available age for person 1
         age1 = list(availableAges.keys())[0]
-        person1 = population.ageDist[age1].pop()
+        members.append(population.ageDist[age1].pop())
         availableAges[age1] -= 1
 
         # if that was the last person of that age, we deleted the available age
         if availableAges[age1] < 1:
-            availableAges.pop(abs(age1))        # ages start at 19
+            availableAges.pop(abs(age1))  # ages start at 19
 
         # pick age for person 2
         ageDifference = random.choice(range(5))
-        ageDifference = min(ageDifference, len(availableAges)-1)
+        ageDifference = min(ageDifference, len(availableAges) - 1)
         age2 = list(availableAges.keys())[ageDifference]
-        person2 = population.ageDist[age2].pop()
+        members.append(population.ageDist[age2].pop())
         availableAges[age2] -= 1
 
         # if that was the last person of that age, we deleted the available age
         if availableAges[age2] < 1:
-            availableAges.pop(abs(age2))         # ages start at 19
+            availableAges.pop(abs(age2))  # ages start at 19
 
-        # household id
-        id = population.createdHouses
-        # we put them in a household
-        house = household(id,2)
-        house.add_member(person1)
-        house.add_member(person2)
-        person1.update_household(id)
-        person2.update_household(id)
 
-        # add house to list of houses
-        population.houseDict.append(house)
+        if childrenless :
+            population = addToHousehold(population, members)
+        else :
+            population, members, childDist = addChildren(population, members, childDist)
+            population = addToHousehold(population, members)
 
-        # increase household id
-        population.createdHouses += 1
-
-        # we also add them to their age group in the future 
 
     return population
 
 
-def twoParentHH(population, twoParentDist):
-    # for every couple we loop through the list
-    # we loop through all the couples and calculate how many children they'll get
-    while (int(sum(twoParentDist) > 0 )):
-      
-        # calculate how many kids they'll get
-        numberOfChildren = how_many_children(twoParentDist)
-        twoParentDist[numberOfChildren] -= 1
+def addToHousehold(population, members) :
+    # household id
+    id = population.createdHouses
+    house = household(id, len(members))
 
-        # create a household
-        id = population.createdHouses
-        house = household(id, 2 + numberOfChildren+1)
+    # we put the members in a household
+    for member in members:
+        house.add_member(member)
+        member.household = id
 
-        # add parents to the household. Ages for couples come from 
-        # guess age of the first parent
-        ageParent1 = random.choice(range(95))
-        while(population.couples[ageParent1] < 1 or len(population.ageDist[ageParent1]) < 1) :
-            ageParent1 = random.choice(range(95))
-        parent1 = population.ageDist[ageParent1].pop()
-        population.couples[ageParent1] -= 1
+    # add house to list of houses
+    population.houseDict.append(house)
 
-        # guess age of the second parent
-        # parents have at most 5 years different in age
-        ageDiff = random.choice(range(20))
-
-        # we try for the parents to have a 5 year age different, this will work for most people
-        ageParent2 = ageParent1 - 10 + ageDiff
-
-        # check that they're not too old to avoid index out of range
-        ageParent2 = min(ageParent2, 95)
-        while(population.couples[ageParent2] < 1 or len(population.ageDist[ageParent2]) < 1) :
-            # if it doesn't work we just give them a random age:
-            # some alone parents live with one of their parents and some people have a bigger age difference than 5
-            ageParent2 = random.choice(range(95))
-        parent2 = population.ageDist[ageParent1].pop()
-        population.couples[ageParent2] -= 1
-
-        #add both parents to the houshold
-        house.add_member(parent1)
-        house.add_member(parent2)
-        parent1.update_household(id)
-        parent2.update_household(id)
-
-        # we loop through the children and give the kids an age and add them to the household
-         # and add create the numberOfChildren wanted
-        for child in range(numberOfChildren + 1) :
-            # choose random age for child and check if there are still kids of that age, kids have a maximum age of 19
-            age = random.choice(range(28))
-            while(len(population.ageDist[age]) <1 ) :         
-                age = random.choice(range(28))
-
-            # get person from age list and add to household
-            person = population.ageDist[age].pop()
-            house.add_member(person)
-            person.update_household(id)
-
-        # add the household to the houses in the population
-        population.houseDict.append(house)
-
-        # increase household id
-        population.createdHouses += 1
-
+    # increase household id
+    population.createdHouses += 1
     return population
 
 
-def oneParentHH(population, oneParentDist):
+def addChildren(population, members, childDist) :
+    # calculate how many kids they'll get
+    numberOfChildren = how_many_children(childDist)
+    childDist[numberOfChildren] -= 1
+    ageparent = members[0].age
+
+    age = max(0, ageparent - 40) #parents are at most 40 years older than their youngest child
+    # create all the children
+    for child in range(numberOfChildren + 1):
+        # choose random age for child and check if there are still kids of that age
+        while(len(population.ageDist[age]) <1) :
+            age += 1
+        child = population.ageDist[age].pop()
+        members.append(child)
+        ageDifference = random.choice(range(5))
+        age += ageDifference
+
+    return population, members, childDist
+
+
+def oneParentHousehold(population, oneParentDist):
     # one parent households
     for parent in range(sum(oneParentDist)):
-        # check how many children the parent will get and create the household
-        numberOfChildren = how_many_children(oneParentDist)
-        oneParentDist[numberOfChildren] -= 1
-        # create a house
-        id = population.createdHouses
-        house = household(id, 1 + numberOfChildren+1)
-
-        # create the parrent, we let their age be between 20 and 55
+        members = []
+        # create the parent, we let their age be between 20 and 55
         age = random.choice(range(35)) + 20
         while(len(population.ageDist[age]) < 1) :
             age = random.choice(range(35)) + 20
-        parent = population.ageDist[age].pop()
-        house.add_member(parent)
-        parent.update_household(id)
+        members.append(population.ageDist[age].pop())
 
         # and add create the numberOfChildren wanted
-        for child in range(numberOfChildren + 1) :
-            # choose random age for child and check if there are still kids of that age, kids have a maximum age of 19
-            age = random.choice(range(19))
-            while(len(population.ageDist[age]) <1 ) :
-                age = random.choice(range(19))
+        population, members, oneParentDist = addChildren(population, members, oneParentDist)
+        population = addToHousehold(population, members)
 
-            # get person from age list and add to household
+    return population
+
+
+def fillHousehold(number, population, lowerLimitAge, upperLimitAge, minMembers, maxMembers) :
+    members = []
+    while (number > 0):
+        numberOfMembers = int(min(random.choice(range(minMembers,maxMembers)), number))
+        for i in range(numberOfMembers):
+            age = random.choice(range(lowerLimitAge, upperLimitAge))
+            while (len(population.ageDist[age]) < 1):
+                age = random.choice(range(lowerLimitAge,upperLimitAge))
             person = population.ageDist[age].pop()
-            house.add_member(person)
-            person.update_household(id)
+            members.append(person)
+        population = addToHousehold(population, members)
+        number -= numberOfMembers
+    return population
 
-        # add house to list of houses
-        population.houseDict.append(house)
-        
-        # increase household id
-        population.createdHouses += 1
 
+def studentHousehold(population) :
+    # number of students that live in a studenthome
+    number = int(STUDENTHOUSE*N/100)
+    population = fillHousehold(number, population, 2,13, 18,25)
+    return population
+
+
+def retirementHousehold(population) :
+    # number of people living in a retirement house
+    number = int(RETIREMENT*N/100)
+    population = fillHousehold(number, population, 44, 52, 90,105)
     return population
 
 
@@ -205,15 +173,13 @@ def make_households(population, N, dataframe, file1, file2, file3):
 
     # number of people in a house 
     population.houseDict = []
-    population.ageDict = [ [] for _ in range(100)]
-
-    # couple without children
-    population = couple_childless(population)
 
     # couples with children
-    population.couples = list(population.amountPeople["Fraction couple with children"])
+    couples = list(population.amountPeople["Fraction couple with children"])
+    p = sum(couples)
     population.children = list(population.amountPeople["Fraction child"])
-    numberOfCouples = int(sum(population.couples) / 2)
+    q = sum(population.children)
+    numberOfCouples = int(sum(couples) / 2)
 
     # two parent households with children
     twoParentDist = [int(numberOfCouples * j) for j in child_dist.iloc[:, 1]]
@@ -236,12 +202,20 @@ def make_households(population, N, dataframe, file1, file2, file3):
     five_houses = (remaining_children - four_houses) / 2
     twoParentDist[2] -= five_houses
     twoParentDist.append(five_houses)
-    twoParentHouses = [i * j for i, j in zip(twoParentDist, [1, 2, 3, 4, 5])]
 
     # add them to the population
-    population = oneParentHH(population, oneParentDist)
-    population = twoParentHH(population, twoParentDist)
+    population = studentHousehold(population)
+    population = createCouples(population, list(population.amountPeople["Fraction couple without children"]) , True, 0)
+    population = oneParentHousehold(population, oneParentDist)
+    population = createCouples(population, list(population.amountPeople["Fraction couple with children"]) , False, twoParentDist )
+    population = retirementHousehold(population)
 
+
+    k = 0
+    for i in range(len(population.ageDist)) :
+        for j in range(len(population.ageDist[i])) :
+            k += 1
+    print(k)
     return population
 
 
@@ -475,18 +449,6 @@ def makeSchoolClasses(population):
             # add the kids to the group
             for child in range(size) :
                 group.add_member(population.people[counter])
-
-
-    return population
-
-# todo create student houses
-def makeStudentHouses(population):
-
-
-    return population
-
-# todo create retirement homes
-def makeRetirementHome(population):
 
 
     return population

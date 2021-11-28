@@ -84,9 +84,13 @@ KIDSINGROUP = 23 # based on the average number of kids in a class in primary sch
                  # for high school the numbers differ per educational attainment. The averages are at lest 13 and at most 26. I have choosen to 
                  # still use the average of 23 for these groups.
                  # https://www.rijksoverheid.nl/onderwerpen/basisonderwijs/vraag-en-antwoord/hoe-zijn-de-groepen-in-het-basisonderwijs-bo-samengesteld
-
-
-
+STUDENTHOUSE = 2.18     # percentage of population living in a student house based on the population in the netherlands, 17.44 milion and
+                        # https://www.kences.nl/wp-content/uploads/2020/11/20201105-Kences-Landelijke-monitor-studentenhuisvesting-2020.pdf
+                        # page 33 "uitwonend" 370.300
+STUDENTSGV = 7          # students live in a house with an averag of 7 per house. This differs from 1 to 13.
+RETIREMENT = 0.67       # number of people living in a retirement home
+PEOPLEINRETIREMENT = 48 # based on the 115,000 people living in retirement houses and the 2373 retirement houses
+                        # in the Netherlands
 
 def parameter():
     return {"N": N,
