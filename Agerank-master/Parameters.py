@@ -91,6 +91,7 @@ STUDENTSGV = 7          # students live in a house with an averag of 7 per house
 RETIREMENT = 0.67       # number of people living in a retirement home
 PEOPLEINRETIREMENT = 48 # based on the 115,000 people living in retirement houses and the 2373 retirement houses
                         # in the Netherlands
+LIVINGALONE = 17.7      # percentage based on cbs
 
 def parameter():
     return {"N": N,

@@ -210,4 +210,9 @@ class studentHouse(household) :
 # create class for population
 class population(object) : 
     def __init__(self):
-        return
+        self.createdHouses = 0
+        self.houseDict = [[], [], [], [], [], [], [], [], [], [],
+                          [], [], [], [], [], [], [], [], [], [],
+                          [], [], [], [], [], [], [], [], [], [],
+                          [], [], [], [], [], [], [], [], [], [],
+                          [], [], [], [], [], [], [], [], [], [], [], []]

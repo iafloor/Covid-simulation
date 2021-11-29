@@ -63,7 +63,7 @@ def createCouples(population, couples, childrenless, childDist):
         if availableAges[age2] < 1:
             availableAges.pop(abs(age2))  # ages start at 19
 
-
+        # if they are parents living with kids, we add them
         if childrenless :
             population = addToHousehold(population, members)
         else :
@@ -75,7 +75,7 @@ def createCouples(population, couples, childrenless, childDist):
 
 
 def addToHousehold(population, members) :
-    # household id
+    # create a new household
     id = population.createdHouses
     house = household(id, len(members))
 
@@ -85,7 +85,7 @@ def addToHousehold(population, members) :
         member.household = id
 
     # add house to list of houses
-    population.houseDict.append(house)
+    population.houseDict[len(members)].append(house)
 
     # increase household id
     population.createdHouses += 1
@@ -98,7 +98,7 @@ def addChildren(population, members, childDist) :
     childDist[numberOfChildren] -= 1
     ageparent = members[0].age
 
-    age = max(0, ageparent - 40) #parents are at most 40 years older than their youngest child
+    age = max(0, ageparent - 40) # parents are at most 40 years older than their youngest child
     # create all the children
     for child in range(numberOfChildren + 1):
         # choose random age for child and check if there are still kids of that age
@@ -130,15 +130,26 @@ def oneParentHousehold(population, oneParentDist):
 
 
 def fillHousehold(number, population, lowerLimitAge, upperLimitAge, minMembers, maxMembers) :
-    members = []
+    """In this definition we fill a list of members of a houshold and add them later to the list of households"""
+
+
+    # while there are still people to be put into households
     while (number > 0):
+        members = []
         numberOfMembers = int(min(random.choice(range(minMembers,maxMembers)), number))
+
+        # for the number of members we're going to add to a household, we choose randomly an age for them. If there
+        # are no more people available of such age, we choose a new age.
         for i in range(numberOfMembers):
             age = random.choice(range(lowerLimitAge, upperLimitAge))
             while (len(population.ageDist[age]) < 1):
                 age = random.choice(range(lowerLimitAge,upperLimitAge))
             person = population.ageDist[age].pop()
+
+            # add member to list of memebers
             members.append(person)
+
+        # add the list of members to the population
         population = addToHousehold(population, members)
         number -= numberOfMembers
     return population
@@ -147,18 +158,18 @@ def fillHousehold(number, population, lowerLimitAge, upperLimitAge, minMembers, 
 def studentHousehold(population) :
     # number of students that live in a studenthome
     number = int(STUDENTHOUSE*N/100)
-    population = fillHousehold(number, population, 2,13, 18,25)
+    population = fillHousehold(number, population, 18,25, 3,13)
     return population
 
 
 def retirementHousehold(population) :
     # number of people living in a retirement house
     number = int(RETIREMENT*N/100)
-    population = fillHousehold(number, population, 44, 52, 90,105)
+    population = fillHousehold(number, population, 75,105, 44, 52)
     return population
 
 
-def make_households(population, N, dataframe, file1, file2, file3):
+def make_households(population, file1, file2, file3):
 
     # read in data from files 
     makeup_data = read_makeup_households(file1)
@@ -166,13 +177,7 @@ def make_households(population, N, dataframe, file1, file2, file3):
     child_dist = read_child_distribution(file3)
     household_data = read_households(N, file2)
 
-    population.amountPeople, total_child_or_couple, non_couples = calculate_household(N, household_data)
-
-    # initialise some numbers
-    population.createdHouses = 0
-
-    # number of people in a house 
-    population.houseDict = []
+    population.amountPeople, total_child_or_couple = calculate_household(N, household_data)
 
     # couples with children
     couples = list(population.amountPeople["Fraction couple with children"])
@@ -209,13 +214,44 @@ def make_households(population, N, dataframe, file1, file2, file3):
     population = oneParentHousehold(population, oneParentDist)
     population = createCouples(population, list(population.amountPeople["Fraction couple with children"]) , False, twoParentDist )
     population = retirementHousehold(population)
-
+    population = otherHouseholds(population)
 
     k = 0
     for i in range(len(population.ageDist)) :
         for j in range(len(population.ageDist[i])) :
             k += 1
     print(k)
+    return population
+
+
+def otherHouseholds(population) :
+    # fill all people living alone
+    for person in range(int(LIVINGALONE*N/100)) :
+        getIndex = random.choice(range(105))
+        while(len(population.ageDist[getIndex]) < 1) :
+            getIndex = random.choice(range(105))
+        population.ageDist[getIndex].pop()
+
+    # calculate how many people there are left
+    k = 0
+    for i in range(len(population.ageDist)):
+        for j in range(len(population.ageDist[i])):
+            k += 1
+
+    # now we have still some people left, we'll put them in households of 2,3 or 4
+    lowestAge = 0
+    while k > 0 :
+        numberOfMembers = int(min(k, random.choice(range(2,5))))
+        members = []
+        for i in range(numberOfMembers) :
+            # we look for the lowest age still available
+            while(len(population.ageDist[lowestAge]) < 1) :
+                lowestAge += 1
+            person = population.ageDist[lowestAge].pop()
+            members.append(person)
+        population = addToHousehold(population, members)
+        k -= numberOfMembers
+    p = 1
     return population
 
 
@@ -382,8 +418,8 @@ def calculate_household(N, dataframe):
     
     # read in some files 
     total = read_age_distribution('Datafiles/CBS_NL_population_20200101.txt').sum()[0]
-    total_child_or_couple = round(N * dataframe.sum().sum() / total)
-
+    total_child_or_couple = round(N * dataframe.sum().sum()  / total)
+    #
     out = pd.DataFrame()
     new_names = ["Fraction child", "Fraction couple without children", "Fraction couple with children"]
     total_people = dataframe.sum().sum()
@@ -403,9 +439,7 @@ def calculate_household(N, dataframe):
         max = out["Fraction child"].idxmax()
         out.loc[max, "Fraction child"] = out.loc[max, "Fraction child"] + 1
 
-    assert out.sum().sum() == total_child_or_couple
-
-    return out, total_child_or_couple, N - total_child_or_couple
+    return out, total_child_or_couple
 
 
 def calculate_houses(N, dataframe):

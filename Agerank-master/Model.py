@@ -145,7 +145,7 @@ def initialise_model(parameters, files, order_type, tracker_changes):
 
     # create households
     print("Creating households")
-    currentPopulation = make_households(currentPopulation, parameters["N"], "a", files["Household_makeup_dataset"],
+    currentPopulation = make_households(currentPopulation, files["Household_makeup_dataset"],
                                      files["People_in_household_dataset"], files["Child_distribution_dataset"])
 
     # determine vaccination order
