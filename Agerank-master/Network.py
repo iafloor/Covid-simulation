@@ -268,10 +268,12 @@ def create_people(population, N, dataframe, vaccinationreadiness) :
     for i in range(N):
         if(i < startage[currentAge+1]) :
             people[currentAge].append(person(i,currentAge,False))
+            dataframe.loc[currentAge, 'Age group class object'].members.append(person(i,currentAge,False))
         else :  
             currentAge += 1
             people.append([])
             people[currentAge].append(person(i,currentAge,False))
+            dataframe.loc[currentAge, 'Age group class object'].members.append(person(i, currentAge, False))
 
     population.ageDist = people
 
@@ -377,6 +379,8 @@ def create_network(dataframe, people, contact_data):
             # size is the number of persons of an age group
             # d[gi][gj] is the degree of a block, which is a submatrix
             # containing all contacts between age groups gi and gj.
+            p = Groepen[gi]
+            q = contact_data[gi][gj]
             out += create_subnetwork(Groepen[gi], Groepen[gj], contact_data[gi][gj], i0, j0)
             sys.stdout.write('\r' + "Blok: " + str(teller))
             sys.stdout.flush()

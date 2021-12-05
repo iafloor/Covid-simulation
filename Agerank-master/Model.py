@@ -199,7 +199,6 @@ def classmateIsSick(population, id):
 
 def infect_cohabitants(parameters,population, tracker_changes):
     # Method of infection for people in the same house.
-    # todo needs to made faster with a sparse matrix instead of looking up everyones household. Also for further work.
 
     infected = []
 
