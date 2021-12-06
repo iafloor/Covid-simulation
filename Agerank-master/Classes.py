@@ -134,7 +134,6 @@ class track_statistics(object):
     def read_data(self, filename):
         return pd.read_csv(filename)
 
-
 class person(object):
     def __init__(self, person_id, age, status=SUSCEPTIBLE, vaccinationReadiness=True, daysSinceInfection=0, weekOfVaccination=0,dontVaccme=False):
         self.person_id = person_id  # corresponds to the index within the adjacency matrix
@@ -147,6 +146,7 @@ class person(object):
         self.schoolClass = -1
         self.overestimate = {}
         self.dontVaccme = dontVaccme
+        self.susceptible = 1
         self.infectious = 0
         self.quarantined = 0
         self.hospitalised = 0
@@ -211,8 +211,5 @@ class studentHouse(household) :
 class population(object) : 
     def __init__(self):
         self.createdHouses = 0
-        self.houseDict = [[], [], [], [], [], [], [], [], [], [],
-                          [], [], [], [], [], [], [], [], [], [],
-                          [], [], [], [], [], [], [], [], [], [],
-                          [], [], [], [], [], [], [], [], [], [],
-                          [], [], [], [], [], [], [], [], [], [], [], []]
+        self.houseDict = []
+        self.otherGroups = []

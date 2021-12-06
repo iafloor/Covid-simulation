@@ -1,8 +1,5 @@
 import random
 
-import numpy as np
-import pandas as pd
-import math
 import random as rd
 import sys
 
@@ -13,11 +10,11 @@ from Parameters import *
 
 
 def how_many_children(available_children):
-    #calculates how many children a family has. We check the maximum and choose a random number,
+    # calculates how many children a family has. We check the maximum and choose a random number,
     # if there are still households needed with that many kids we're done, else we choose another number
-    maxNumberOfChildren: int = len(available_children)
-    numberOfChildren: int = random.choice((range(0,maxNumberOfChildren)))
-    while(available_children[numberOfChildren] < 1) :
+    maxNumberOfChildren = len(available_children)
+    numberOfChildren = random.choice((range(0,maxNumberOfChildren)))
+    while available_children[numberOfChildren] < 1:
         numberOfChildren = random.choice((range(0,maxNumberOfChildren)))
     return numberOfChildren
 
@@ -33,7 +30,7 @@ def createCouples(population, couples, childrenless, childDist):
     availableAges = {}
 
     # calculate the start age
-    startage = 0;
+    startage = 0
     while (couples[startage] < 1):
         startage += 1
 
@@ -85,7 +82,7 @@ def addToHousehold(population, members) :
         member.household = id
 
     # add house to list of houses
-    population.houseDict[len(members)].append(house)
+    population.houseDict.append(house)
 
     # increase household id
     population.createdHouses += 1
@@ -204,7 +201,7 @@ def make_households(population, file1, file2, file3):
 
     twoParentDist[2] -= four_houses
     twoParentDist.append(four_houses)
-    five_houses = (remaining_children - four_houses) / 2
+    five_houses = int(remaining_children - four_houses) / 2
     twoParentDist[2] -= five_houses
     twoParentDist.append(five_houses)
 
@@ -216,11 +213,6 @@ def make_households(population, file1, file2, file3):
     population = retirementHousehold(population)
     population = otherHouseholds(population)
 
-    k = 0
-    for i in range(len(population.ageDist)) :
-        for j in range(len(population.ageDist[i])) :
-            k += 1
-    print(k)
     return population
 
 
@@ -480,13 +472,16 @@ def makeSchoolClasses(population):
     for age in range(4,19) :
         while(counter < len(population.ageDist[age])) :
             # create a new group and decide the size of the group
-            size = random.choice(average - 5, average + 6)
+            size = random.choice(range(average - 5, average + 6))
             size = min(size, len(population.ageDist[age]))
             group = schoolGroup(groupID,age)
 
             # add the kids to the group
             for child in range(size) :
                 group.add_member(population.people[counter])
+
+            # add group to population
+            population.otherGroups.append(group)
 
 
     return population

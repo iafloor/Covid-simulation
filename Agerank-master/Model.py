@@ -1,8 +1,3 @@
-import random as rd
-import sys
-import numpy as np
-import numba
-
 from Network import *
 from Read_data import *
 from Classes import *
@@ -100,7 +95,7 @@ def vaccination_order_function(population, age_groups, type, start_age):
         start = population.people[age_groups.iloc[50]:]
         start.reverse()
         order = start + tail
-    if type == 4:  # custom
+    else :  # custom
         one = population.people[age_groups.iloc[40]:age_groups.iloc[60]]
         two = population.people[age_groups.iloc[60]:]
         two.reverse()
@@ -165,36 +160,54 @@ def initialise_model(parameters, files, order_type, tracker_changes):
     return data, contact_matrix, tracker_changes, currentPopulation
 
 
-def infectChance(population) :
+def infectChance(time, population, person) :
     """ This function calculates the chance that someone will get infect.
      This is based on a couple factors:
-     - if there is someone infected in their household or schoolclass
-     - their age
-     - if they are vaccinated (and how long ago)
+    CHEKC if there is someone infected in their household or schoolclass
+     - their age --> beta variant doesn't matter about age
+     CHECK if they are vaccinated (and how long ago)
      - if they have been infected before
      - the random chance to get COVID by the polymod"""
-    return population
+    chance = 0
+
+    # if cohab or classmate is sick, chance increases
+    chance += cohabIsSick(population, person)
+    chance += classmateIsSick(population, person)
+
+    # if person has not been vaccinated chance increases
+    # if persen is vaccinated, protection decreases over time
+    if person.vaccinated :
+        chance += prevVaccinated(time, person)
+    else :
+        chance += 10
+
+    return chance
 
 
 def cohabIsSick(population, person):
     # checks if there is someone sick in your household
     household = person.household
     if (population.houseDict[household].infected > 0) :
-        chance = 0.2
+        chance = 20
     else :
         chance = 0
     return chance
 
 
-def classmateIsSick(population, id):
+def classmateIsSick(population, person):
     # checks if there is someone sick in your class
     id = person.schoolClass
+    chance = 0
     if(id > -1) :   # a person has id -1 if they're not in a class
         if(population.schoolGroup[id].infected > 0):
-            chance = 0.2
-        else :
-            chance = 0
+            chance = 20
     return chance
+
+
+def prevVaccinated(time, person):
+    vaccInWeek = person.weekOfVaccination
+    timeSinceVacc = int(time/7) - vaccInWeek
+    return 20 + 5*timeSinceVacc
 
 
 def infect_cohabitants(parameters,population, tracker_changes):
@@ -225,13 +238,13 @@ def infect_cohabitants(parameters,population, tracker_changes):
                         tracker_changes['currently infected'] += 1
                         tracker_changes['total infected'] += 1
                         tracker_changes["transmitter"] += 1
-                        person.update_days_since_infection(1)
 
     return tracker_changes
 
 
-def infect_perturbation(parameters, people, tracker_changes):
+def infect_perturbation(parameters, p, tracker_changes):
     # this infects a fraction of the poplulation proportional to the the amount of infections
+    people = population.people
     n = len(people)
     x = np.zeros((n + 1), dtype=int)
 
@@ -257,28 +270,29 @@ def infect_perturbation(parameters, people, tracker_changes):
             tracker_changes['currently infected'] += 1
             tracker_changes['total infected'] += 1
             tracker_changes["transmitter"] += 1
-            person.update_days_since_infection(1)
 
     return tracker_changes
 
 
-def infect_standard(parameters, network, people, tracker_changes):
+def infect_standard(parameters, network, population):
     """This function performs one time step (day) of the infections
     a is the n by n adjacency matrix of the network
     status represents the health status of the persons.
     In this step, infectious persons infect their susceptible contacts
     with a certain probability.
     """
+
+    people = population.people
     n = len(people)
     x = np.zeros((n + 1), dtype=int)
     y = np.zeros((n + 1), dtype=int)
 
     # determine list of infectious persons from status
     for person in people:
-        if person.status == parameters["INFECTIOUS"] or person.status == parameters["SYMPTOMATIC"]:
+        if person.infectious == 1:
             x[person.person_id] = 1
-        elif person.status == parameters["TRANSMITTER"] and rd.random() < parameters["P_TRANSMIT0"]:
-            x[person.person_id] = 1
+        #elif person.status == parameters["TRANSMITTER"] and rd.random() < parameters["P_TRANSMIT0"]:
+        #    x[person.person_id] = 1
 
     # propagate the infections
     for edge in network:
@@ -294,85 +308,97 @@ def infect_standard(parameters, network, people, tracker_changes):
             if y[person.person_id] == 1:
                 p = parameters["P_MEETING"]  # probability of a meeting with 1 infected contact
             else:
-                p = 1 - (1 - parameters["P_MEETING"]) ** y[i]  # probability with more than 1
+                p = 1 - (1 - parameters["P_MEETING"]) ** y[person.person_id]  # probability with more than 1
             if r < p:
                 if person.status == parameters["SUSCEPTIBLE"]:
-                    person.update_status(parameters["INFECTIOUS"])
-                    tracker_changes["currently infected"] += 1
-                    tracker_changes["total infected"] += 1
-                    tracker_changes["susceptible"] -= 1
-                elif person.status == parameters["VACCINATED"]:
-                    if rd.random() < parameters["P_TRANSMIT1"]:
-                        person.update_status(parameters["TRANSMITTER"])
-                        tracker_changes['currently infected'] += 1
-                        tracker_changes['total infected'] += 1
-                        tracker_changes["transmitter"] += 1
-                        person.update_days_since_infection(1)
+                    person.daysSinceInfection = 1
+        id = person.person_id
+        population.people[id] = person
 
-    return tracker_changes
+    return population
 
 
-def update(fatality, people, status_changes):
+def update(fatality, population, status_changes):
     """This function updates the status and increments the number
     of days that a person has been infected.
     For a new infection, days[i]=1.  For uninfected persons, days[i]=0.
     Input: infection fatality rate and age of persons i
     """
     new_status_changes = status_changes
+    people = population.people
     for person in people:
-        if not person.status == SUSCEPTIBLE and not person.status == VACCINATED:
-            new_days = person.how_many_days() + 1
-            person.update_days_since_infection(new_days)
+        id = person.person_id
+        if person.daysSinceInfection > 0 :
+            if person.daysSinceInfection == 1 :
+                new_status_changes["currently infected"] += 1
+                new_status_changes["total infected"] += 1
+                population.people[id].susceptible = 0
+        population.people[id].daysSinceInfection += 1
 
-        if person.status == INFECTIOUS and person.days_since_infection == DAY_SYMPTOMS:
+        # on the day symptoms should be noticable we check if someone goes into quarantine
+        # if someone does not go in quarantine because they don't want to, they don't know
+        # that they have COVID or for other reasons, they stay in their household.
+        # for this it doesn't matter if they have or do not have symptoms
+        if person.daysSinceInfection == DAY_SYMPTOMS :
             if rd.random() < P_QUARANTINE:
                 # i gets symptoms and quarantines
-                person.update_status(QUARANTINED)
+                population.people[id].quarantined = 1
                 new_status_changes["quarantined"] += 1
-
             else:
                 # i gets symptoms but does not quarantine
-                person.update_status(SYMPTOMATIC)
-                new_status_changes["symptomatic"] += 1
+                houseID = population.people[id].household
+                population.houseDict[houseID].infected += 1
+                population.people[id].infectious += 1
 
-        if (person.status == QUARANTINED) and person.days_since_infection == DAY_RECOVERY:
-            new_status_changes["quarantined"] += -1
+        # on the recovery day of a person we check if they recover or if they get admitted to the hospital
+        # when they are hospitalised we change their status based on if they had been quarantined.
+        if person.daysSinceInfection == DAY_RECOVERY :
             if rd.random() < RATIO_HF * fatality[person.age]:
-                person.update_status(HOSPITALISED)
+                population.people[id].hospitalised = 1
+                if person.quarantined != 1 :
+                    population.people[id].infectious -= 1
+                    houseId = person.household
+                    population.houseDict[houseId].infected -= 1
+                    schoolId = person.schoolClass
+                    if schoolId > -1 :
+                        population.otherGroups[schoolId].infected -= 1
+                else :
+                    population.people[id].quarantined -= 1
+                population.people[id].hospitalised += 1
                 new_status_changes["hospitalized"] += 1
+                new_status_changes["quarantined"] -= 1
             else:
-                person.update_status(RECOVERED)
+                population.people[id].infectious = 0
+                population.people[id].quarantined = 0
+                population.people[id].daysSinceInfection = 0
+                population.people[id].recovered = 1
                 new_status_changes["recovered"] += 1
-                new_status_changes["currently infected"] += -1
+                new_status_changes["currently infected"] -= 1
 
-        if person.status == SYMPTOMATIC and person.days_since_infection == DAY_RECOVERY:
-            new_status_changes["symptomatic"] += -1
-            if rd.random() < RATIO_HF * fatality[person.age]:
-                person.update_status(HOSPITALISED)
-                new_status_changes["hospitalized"] += 1
-            else:
-                person.update_status(RECOVERED)
-                new_status_changes["recovered"] += 1
-                new_status_changes["currently infected"] += -1
-
-        if person.status == HOSPITALISED and person.days_since_infection == DAY_RELEASE:
-            new_status_changes["hospitalized"] += -1
+        # on the day of release of someone who has been hospitalised, they have a chance of dying
+        if person.daysSinceInfection == DAY_RELEASE:
+            new_status_changes["hospitalized"] -= 1
+            population.people[id].hospitalised = 0
             if rd.random() < 1 / RATIO_HF:
-                person.update_status(DECEASED)
+                population.people[id].infectious = 0
+                population.people[id].quarantined = 0
+                population.people[id].daysSinceInfection = 0
+                population.people[id].deceased = 1
                 new_status_changes["deceased"] += 1
-                new_status_changes["currently infected"] += -1
+                new_status_changes["currently infected"] -= 1
             else:
-                person.update_status(RECOVERED)
+                population.people[id].infectious = 0
+                population.people[id].quarantined = 0
+                population.people[id].daysSinceInfection = 0
+                population.people[id].recovered = 1
                 new_status_changes["recovered"] += 1
                 new_status_changes["currently infected"] += -1
 
-        if person.status == TRANSMITTER and person.days_since_infection == NDAYS_TRANSMIT:
-            person.update_status(VACCINATED)
-            new_status_changes["transmitter"] += -1
-            new_status_changes["currently infected"] += -1
-            # new_status_changes["vaccinated"] += 1
+        # update the population
+        # id = person.person_id
+        # population.people[id] = person
 
-    return new_status_changes
+    return population, new_status_changes
 
 
 def vaccinate(population, status_changes):
@@ -394,7 +420,7 @@ def vaccinate(population, status_changes):
                 new_status_changes["susceptible"] += -1
                 new_status_changes["vaccinated"] += 1
 
-        if person.status == RECOVERED and person.days_since_infection >= DAY_RECOVERY + NDAYS_VACC:
+        if person.status == RECOVERED and person.daysSinceInfection >= DAY_RECOVERY + NDAYS_VACC:
             person.update_status(VACCINATED)
             new_status_changes["vaccinated"] += 1
 
@@ -406,27 +432,18 @@ def run_model(population, parameters, data, contact_matrix, tracker, timesteps, 
     for time in range(timesteps):
         sys.stdout.write('\r' + "Tijdstap: " + str(time))
         sys.stdout.flush()
-        status_changes_0 = tracker.empty_changes()
-        if time < start_vaccination:
-            for person in population.people:
-                populate = cohabIsSick(population, person )
+        status_changes = tracker.empty_changes()
+        for person in population.people:
+            if person.susceptible == 1 :
+                number = random.choice(range(100))
+                if number < infectChance(time, population, person) :
+                    id = person.person_id
+                    population.people[id].daysSinceInfection = 1
+        population = infect_standard(parameters, contact_matrix, population)
 
-            status_changes_1 = infect_cohabitants(parameters, population, status_changes_0)
-            #status_changes_2 = infect_standard(parameters, contact_matrix, population.people, status_changes_1)
-            #status_changes_3 = infect_perturbation(parameters, population.people, status_changes_2)
-            #status_changes_4 = update(data['IFR'], population.people, status_changes_3)
-
-            tracker.update_statistics(status_changes_1)
-        else:
-            for person in population.people:
-                populate = cohabIsSick(population, person)
-            status_changes_1 = infect_cohabitants(parameters, population, status_changes_0)
-            #status_changes_2 = infect_standard(parameters, contact_matrix, population.people, status_changes_1)
-            #status_changes_3 = infect_perturbation(parameters, population.people, status_changes_2)
-            #status_changes_4 = update(data['IFR'], population.people, status_changes_3)
-            #status_changes_5, population = vaccinate(population, status_changes_4)
-
-            tracker.update_statistics(status_changes_1)
+        # update the population
+        population, changes = update(data['IFR'], population, status_changes)
+        tracker.update_statistics(changes)
 
     return tracker
 
