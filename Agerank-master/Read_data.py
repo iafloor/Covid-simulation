@@ -1,5 +1,5 @@
 from Classes import age_group
-from Datasets import filenames_dictionary
+from Parameters import *
 
 import numpy as np
 import pandas as pd
@@ -169,7 +169,7 @@ def read_contact_data(dataframe, participants_file, contacts_file, PERIOD):
     return degree
 
 
-def determine_age_distribution(parameters, dataframe):
+def determine_age_distribution(dataframe):
     '''
     determine age distribution for persons in network to be created
     :param N: Number of people to be modelled in the population
@@ -183,7 +183,7 @@ def determine_age_distribution(parameters, dataframe):
     partial_sum = 0  # partial sum
     for k in range(len(dataframe.index)):
         fraction = partial_sum / total
-        start_age[k] = math.floor(fraction * parameters["N"])
+        start_age[k] = math.floor(fraction * N)
         partial_sum += dataframe["Number of people"][k]  # psum = number of persons aged <= k
     return start_age
 

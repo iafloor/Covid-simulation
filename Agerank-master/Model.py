@@ -4,7 +4,7 @@ from Classes import *
 from Parameters import *
 
 
-def initialise_infection(parameters, people, tracker_changes):
+def initialise_infection(people, tracker_changes):
     """ This function creates an array of n vertices (persons)
     and randomly initialises a fraction P0 of the persons
     as infected, denoted by status[i]=INFECTIOUS.
@@ -14,7 +14,7 @@ def initialise_infection(parameters, people, tracker_changes):
     # infect a fraction P0 of the population
     # todo dit kan sneller door willekeurig N*P0 elements uit range(0,N) te kiezen zonder terugleggen
     for person in people:
-        if rd.random() < parameters["P0"]:
+        if rd.random() < P0:
             person.infectious = 1
             tracker_changes["currently infected"] += 1
             tracker_changes["total infected"] += 1
@@ -24,7 +24,7 @@ def initialise_infection(parameters, people, tracker_changes):
     return tracker_changes
 
 
-def reconstruct_vaccination(parameters, order, tracker_changes, files, dataframe, population):
+def reconstruct_vaccination(order, tracker_changes, files, dataframe, population):
     "This function will reconstruct the vaccination of people in the past 6 months"
     new_status_changes = tracker_changes
     previouslyVaccinated = readVacciation(files["previouslyVaccinated"])
@@ -106,7 +106,7 @@ def vaccination_order_function(population, age_groups, type, start_age):
     return population
 
 
-def initialise_model(parameters, files, order_type, tracker_changes):
+def initialise_model(files, order_type, tracker_changes):
     # This initializes everything for the model to run
 
     # Read age distribution and add to dataframe
@@ -120,15 +120,15 @@ def initialise_model(parameters, files, order_type, tracker_changes):
     # Add corresponding age groups to dataframe
     # These age groups are all ages in the range(start_group[i],start_group[i+1])
     print("Creating age group class objects.")
-    data["Age group class object"] = make_age_groups(data, parameters["STARTGROUP"], len(data.index))
+    data["Age group class object"] = make_age_groups(data, STARTGROUP, len(data.index))
 
     # Determine how many people of each age there are
-    print("Determining age distribution for population of " + str(parameters["N"]) + "people.")
-    data["Start of age group"] = determine_age_distribution(parameters, data)
+    print("Determining age distribution for population of " + str(N) + "people.")
+    data["Start of age group"] = determine_age_distribution(data)
 
     # Read the file containing data about contacts longer then 15 minutes
     print("Creating age group contact distribution.")
-    contact_data = read_contact_data(data, files["Polymod_participants_dataset"], files["Polymod_contacts_dataset"], parameters["PERIOD"])
+    contact_data = read_contact_data(data, files["Polymod_participants_dataset"], files["Polymod_contacts_dataset"], PERIOD)
 
     # create population
     print("Creating a population")
@@ -136,7 +136,7 @@ def initialise_model(parameters, files, order_type, tracker_changes):
 
     # adding people to the population
     print("Creating people.")
-    currentPopulation = create_people(currentPopulation, parameters["N"], data, parameters["Vacc_readiness"])
+    currentPopulation = create_people(currentPopulation, N, data, Vacc_readiness)
 
     # create households
     print("Creating households")
@@ -145,17 +145,17 @@ def initialise_model(parameters, files, order_type, tracker_changes):
 
     # determine vaccination order
     print("Determining vaccination order")
-    currentPopulation = vaccination_order_function(currentPopulation, data["Start of age group"], order_type, parameters["STARTAGE"])
+    currentPopulation = vaccination_order_function(currentPopulation, data["Start of age group"], order_type, STARTAGE)
 
     # Create contact network
     print("Generating network.")
     contact_matrix = create_network(data, currentPopulation.people, contact_data)
     
     # Initialize infection
-    tracker_changes = initialise_infection(parameters, currentPopulation.people, tracker_changes)
+    tracker_changes = initialise_infection(currentPopulation.people, tracker_changes)
 
     # Initialize vaccination
-    tracker_changes, currentPopulation.vaccOrder = reconstruct_vaccination(parameters, currentPopulation.vaccOrder, tracker_changes, files, data, currentPopulation)
+    tracker_changes, currentPopulation.vaccOrder = reconstruct_vaccination(currentPopulation.vaccOrder, tracker_changes, files, data, currentPopulation)
 
     return data, contact_matrix, tracker_changes, currentPopulation
 
@@ -163,11 +163,9 @@ def initialise_model(parameters, files, order_type, tracker_changes):
 def infectChance(time, population, person) :
     """ This function calculates the chance that someone will get infect.
      This is based on a couple factors:
-    CHEKC if there is someone infected in their household or schoolclass
-     - their age --> beta variant doesn't matter about age
-     CHECK if they are vaccinated (and how long ago)
-     - if they have been infected before
-     - the random chance to get COVID by the polymod"""
+    - if there is someone infected in their household or schoolclass
+     - if they are vaccinated (and how long ago)
+     - if they have been infected before"""
     chance = 0
 
     # if cohab or classmate is sick, chance increases
@@ -205,12 +203,14 @@ def classmateIsSick(population, person):
 
 
 def prevVaccinated(time, person):
+    # this function calculates how long ago someone has been vaccinated
+    # according to research the protection of a vaccine decreases over time
     vaccInWeek = person.weekOfVaccination
     timeSinceVacc = int(time/7) - vaccInWeek
     return 20 + 5*timeSinceVacc
 
-
-def infect_cohabitants(parameters,population, tracker_changes):
+"""
+def infect_cohabitants(population, tracker_changes):
     # Method of infection for people in the same house.
 
     infected = []
@@ -240,8 +240,8 @@ def infect_cohabitants(parameters,population, tracker_changes):
                         tracker_changes["transmitter"] += 1
 
     return tracker_changes
-
-
+"""
+"""
 def infect_perturbation(parameters, p, tracker_changes):
     # this infects a fraction of the poplulation proportional to the the amount of infections
     people = population.people
@@ -272,9 +272,9 @@ def infect_perturbation(parameters, p, tracker_changes):
             tracker_changes["transmitter"] += 1
 
     return tracker_changes
+"""
 
-
-def infect_standard(parameters, network, population):
+def infect_standard(network, population):
     """This function performs one time step (day) of the infections
     a is the n by n adjacency matrix of the network
     status represents the health status of the persons.
@@ -291,8 +291,6 @@ def infect_standard(parameters, network, population):
     for person in people:
         if person.infectious == 1:
             x[person.person_id] = 1
-        #elif person.status == parameters["TRANSMITTER"] and rd.random() < parameters["P_TRANSMIT0"]:
-        #    x[person.person_id] = 1
 
     # propagate the infections
     for edge in network:
@@ -306,11 +304,11 @@ def infect_standard(parameters, network, population):
         if y[person.person_id] > 0:
             r = rd.random()
             if y[person.person_id] == 1:
-                p = parameters["P_MEETING"]  # probability of a meeting with 1 infected contact
+                p = P_MEETING # probability of a meeting with 1 infected contact
             else:
-                p = 1 - (1 - parameters["P_MEETING"]) ** y[person.person_id]  # probability with more than 1
+                p = 1 - (1 - P_MEETING) ** y[person.person_id]  # probability with more than 1
             if r < p:
-                if person.status == parameters["SUSCEPTIBLE"]:
+                if person.susceptible == 1:
                     person.daysSinceInfection = 1
         id = person.person_id
         population.people[id] = person
@@ -401,6 +399,33 @@ def update(fatality, population, status_changes):
     return population, new_status_changes
 
 
+def boosters(population, number, startage, week):
+    """In this function we give a number of people a boostervaccine. The vaccines
+    are distrubted from oldest to youngest and you can only get a boostervaccine
+    if you have already been vaccinated before. We update the week of vaccination
+    to the current week and use a parameter startage which keeps track of where
+    we left vaccinating the previous day."""
+
+    for i in range(number):
+        # if the person has not been vaccinated, we skip them
+        while population.people[startage].weekOfVaccination < 0 :
+            startage -= 1
+        population.people[startage].weekOfVaccination = week
+
+
+def vaccinateKids(population, number, week):
+    """In this function we vaccinate children under 12. We chose a
+    random index and check if this kid has already been vaccinated,
+    if so we chose another one."""
+
+    for i in range(number):
+        index = 1
+        while(population.people[index].vaccinated != 0):
+            index = 1
+        population.people[index].vaccinated = 1
+        population.people[index].weekOfVaccination = week
+
+
 def vaccinate(population, status_changes):
     """This function performs one time step (day) of the vaccinations.
     status represents the health status of the persons.
@@ -427,39 +452,48 @@ def vaccinate(population, status_changes):
     return new_status_changes, population
 
 
-def run_model(population, parameters, data, contact_matrix, tracker, timesteps, start_vaccination=0):
-    # Function for running the model. It wraps the vaccinate, infection and update functions
+def run_model(population, data, contact_matrix, tracker, timesteps, start_vaccination=0):
+    """ This function simulates infections for a given number of days given by the input timesteps.
+    The input for this function is the population containing information about all the people and
+    their households, the contact matrix containing occasional meetings between people. A tracker
+    that keeps track of the statistical changes and the number of timesteps."""
     for time in range(timesteps):
-        sys.stdout.write('\r' + "Tijdstap: " + str(time))
+        sys.stdout.write('\r' + "Time step: " + str(time)) # printing the day we are currently simulating
         sys.stdout.flush()
         status_changes = tracker.empty_changes()
+        # loop through all the people in the population, if they are not sick we calculate their change
+        # of getting infected. If they get infected it is their first day since infection.
         for person in population.people:
             if person.susceptible == 1 :
                 number = random.choice(range(100))
                 if number < infectChance(time, population, person) :
                     id = person.person_id
                     population.people[id].daysSinceInfection = 1
-        population = infect_standard(parameters, contact_matrix, population)
 
-        # update the population
+        # we infect a number of people based on occasional meetings
+        population = infect_standard(contact_matrix, population)
+
+        # update the people in the population
         population, changes = update(data['IFR'], population, status_changes)
+
+        # update the tracker
         tracker.update_statistics(changes)
 
     return tracker
 
 
-def model(parameters, filenames, type, timesteps):
+def model(filenames, type, timesteps):
     # this initializes and runs the entire model for a certain number of timesteps.
     # It returns a pandas dataframe containing all data at time t
     tracker = track_statistics()
 
     tracker_changes = tracker.init_empty_changes()
-    data, contact_matrix, tracker_changes, currentPopulation = initialise_model(parameters, filenames, type, tracker_changes)
+    data, contact_matrix, tracker_changes, currentPopulation = initialise_model(filenames, type, tracker_changes)
     # update the dataframe
     tracker.update_statistics(tracker_changes)
 
     # Run the model
-    tracker = run_model(currentPopulation, parameters, data, contact_matrix, tracker, timesteps - 1, 0)
+    tracker = run_model(currentPopulation, data, contact_matrix, tracker, timesteps - 1, 0)
 
     return tracker
 
