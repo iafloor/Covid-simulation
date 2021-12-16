@@ -177,8 +177,9 @@ class group(object):
 
 
 class household(group):
-    def __init__(self, household_id, number_of_members):
+    def __init__(self, household_id, number_of_members, ids):
         self.number_of_members = number_of_members
+        self.ids = []
         super().__init__(household_id)
 
 

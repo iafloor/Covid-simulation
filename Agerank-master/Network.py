@@ -74,13 +74,16 @@ def createCouples(population, couples, childrenless, childDist):
 def addToHousehold(population, members) :
     # create a new household
     id = population.createdHouses
-    house = household(id, len(members))
+    house = household(id, len(members), [])
 
     # we put the members in a household
     for member in members:
         house.add_member(member)
         member.household = id
 
+    # and we put their ids in the hosuehold
+    for member in members:
+        house.ids.append(member.person_id)
     # add house to list of houses
     population.houseDict.append(house)
 

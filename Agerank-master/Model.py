@@ -24,65 +24,6 @@ def initialise_infection(people, tracker_changes):
     return tracker_changes
 
 
-def reconstruct_vaccination(order, tracker_changes, files, dataframe, population):
-    "This function will reconstruct the vaccination of people in the past 6 months"
-    new_status_changes = tracker_changes
-    previouslyVaccinated = readVacciation(files["previouslyVaccinated"])
-    ages = dataframe["Start of age group"].tolist()
-
-    # percentage of people of an age group that is already vaccinated
-    alreadyVaccinated = [0 for i in range(len(previouslyVaccinated.index))]
-
-    # list with all indices of the startages
-    indices = []
-    indices.append(ages[12])
-    for i in range(1,16) :
-        age = 2022 - int(previouslyVaccinated["age"][i][0:4])
-        indices.append(ages[age])
-
-    # we loop through all the weeks we have data off
-    time = len(previouslyVaccinated.columns)
-    week = 1
-    gevaccineerd = 0
-    listOfNubers = []
-    while (week < time):
-        weeklyData = previouslyVaccinated[week]
-        week += 1
-
-        # now we vaccinate a percentage of alll
-        for i in range(1,len(previouslyVaccinated.index)) :
-            index, currentRange = getIndex(indices,i)
-            # number of people we are going to vaccinate
-            next = weeklyData[i] - alreadyVaccinated[i]
-            number = int(next*(currentRange/N*1000))
-            if number > 0:
-                for j in range(number) :
-                    while(population.people[index].vaccinated != 0) :
-                        index, x = getIndex(indices,i)
-                    population.people[index].vaccinated = 1
-                    gevaccineerd += 1
-                    population.people[index].weekOfVaccination = week
-                    person = population.people[index]
-        alreadyVaccinated = previouslyVaccinated[week-1]
-        listOfNubers.append(gevaccineerd/N*100)
-
-    p = population.people[67382]
-    return new_status_changes, order
-
-
-def getIndex(indices, i):
-    if i == 1:
-        begin = 0
-    else:
-        begin = indices[i - 1]
-    if i == 16:
-        end = 100000
-    else:
-        end = indices[i]
-    index = random.choice(range(begin, end))
-    return index, end-begin
-
-
 def vaccination_order_function(population, age_groups, type, start_age):
     # This is a function that creates a list of people to vaccinate to follow in the model
     if type == 1:  # Old to yound
@@ -152,32 +93,31 @@ def initialise_model(files, order_type, tracker_changes):
     contact_matrix = create_network(data, currentPopulation.people, contact_data)
     
     # Initialize infection
-    tracker_changes = initialise_infection(currentPopulation.people, tracker_changes)
-
-    # Initialize vaccination
-    tracker_changes, currentPopulation.vaccOrder = reconstruct_vaccination(currentPopulation.vaccOrder, tracker_changes, files, data, currentPopulation)
+    #tracker_changes = initialise_infection(currentPopulation.people, tracker_changes)
 
     return data, contact_matrix, tracker_changes, currentPopulation
 
+# infecting people
 
 def infectChance(time, population, person) :
-    """ This function calculates the chance that someone will get infect.
-     This is based on a couple factors:
-    - if there is someone infected in their household or schoolclass
-     - if they are vaccinated (and how long ago)
-     - if they have been infected before"""
+    """ This function calculates the chance that someone will get infect based
+    on the infections in their innercircle. This chance is base on:
+    - how many people in their household are infected
+    - how many people in their classroom are infected
+    and an overall difference if someone has been vaccinated or not
+    and how long ago"""
     chance = 0
 
     # if cohab or classmate is sick, chance increases
     chance += cohabIsSick(population, person)
     chance += classmateIsSick(population, person)
 
-    # if person has not been vaccinated chance increases
-    # if persen is vaccinated, protection decreases over time
-    if person.vaccinated :
-        chance += prevVaccinated(time, person)
-    else :
-        chance += 10
+    # if persen is vaccinated chance lowers but protection decreases over time
+    if chance > 0:
+        if person.vaccinated :
+            chance *= prevVaccinated(time, person)
+        else :
+            chance = 10
 
     return chance
 
@@ -209,70 +149,6 @@ def prevVaccinated(time, person):
     timeSinceVacc = int(time/7) - vaccInWeek
     return 20 + 5*timeSinceVacc
 
-"""
-def infect_cohabitants(population, tracker_changes):
-    # Method of infection for people in the same house.
-
-    infected = []
-
-    for j in population.people:
-        if j.household != 0:
-            if j.status == parameters["INFECTIOUS"] or j.status == parameters["SYMPTOMATIC"]:
-                infected.append(j)
-            elif j.status == parameters["TRANSMITTER"] and rd.random() < parameters["P_TRANSMIT0"]:
-                infected.append(j)
-
-    for j in infected:
-        members = population.houseDict[j.household].members
-        cohabitants = [members[i] for i in range(len(members)) if members[i] != j]
-        for cohab in cohabitants:
-            if rd.random() < parameters["P_COHAB"]:
-                if j.status == parameters["SUSCEPTIBLE"]:
-                    j.update_status(parameters["INFECTIOUS"])
-                    tracker_changes["currently infected"] += 1
-                    tracker_changes["total infected"] += 1
-                    tracker_changes["susceptible"] -= 1
-                elif j.status == parameters["VACCINATED"]:
-                    if rd.random() < parameters["P_TRANSMIT1"]:
-                        j.update_status(parameters["TRANSMITTER"])
-                        tracker_changes['currently infected'] += 1
-                        tracker_changes['total infected'] += 1
-                        tracker_changes["transmitter"] += 1
-
-    return tracker_changes
-"""
-"""
-def infect_perturbation(parameters, p, tracker_changes):
-    # this infects a fraction of the poplulation proportional to the the amount of infections
-    people = population.people
-    n = len(people)
-    x = np.zeros((n + 1), dtype=int)
-
-    for person in people:
-        if person.status == parameters["INFECTIOUS"] or person.status == parameters["SYMPTOMATIC"]:
-            x[person.person_id] = 1
-        elif person.status == parameters["TRANSMITTER"] and rd.random() < parameters["P_TRANSMIT0"]:
-            x[person.person_id] = 1
-
-    total_infected = sum(x)
-    prob = 1 - (1 - parameters["P_ENCOUNTER"] * (total_infected / (parameters["N"] - 1))) ** (parameters["ENCOUNTERS"])
-    to_infect = [i for i in range(n) if rd.random() < prob]
-
-    for id in to_infect:
-        person = people[id]
-        if person.status == parameters["SUSCEPTIBLE"]:
-            person.update_status(parameters["INFECTIOUS"])
-            tracker_changes["currently infected"] += 1
-            tracker_changes["total infected"] += 1
-            tracker_changes["susceptible"] -= 1
-        elif person.status == parameters["VACCINATED"]:
-            person.update_status(parameters["TRANSMITTER"])
-            tracker_changes['currently infected'] += 1
-            tracker_changes['total infected'] += 1
-            tracker_changes["transmitter"] += 1
-
-    return tracker_changes
-"""
 
 def infect_standard(network, population):
     """This function performs one time step (day) of the infections
@@ -315,6 +191,7 @@ def infect_standard(network, population):
 
     return population
 
+# update the data
 
 def update(fatality, population, status_changes):
     """This function updates the status and increments the number
@@ -331,7 +208,7 @@ def update(fatality, population, status_changes):
                 new_status_changes["currently infected"] += 1
                 new_status_changes["total infected"] += 1
                 population.people[id].susceptible = 0
-        population.people[id].daysSinceInfection += 1
+            population.people[id].daysSinceInfection += 1
 
         # on the day symptoms should be noticable we check if someone goes into quarantine
         # if someone does not go in quarantine because they don't want to, they don't know
@@ -398,6 +275,7 @@ def update(fatality, population, status_changes):
 
     return population, new_status_changes
 
+# functions to vaccinate people
 
 def boosters(population, number, startage, week):
     """In this function we give a number of people a boostervaccine. The vaccines
@@ -451,6 +329,159 @@ def vaccinate(population, status_changes):
 
     return new_status_changes, population
 
+# preprocessing functions
+
+def refuseVaccination(population, dataframe):
+    """This function handles creating vaccine refusers. When someone in a household
+    refuses  a vaccine, the rest of the household has a higher change to refuse a
+    vaccine too."""
+
+    # we start by decreasing the readiness for a vaccine for some people.
+    ages = dataframe["Start of age group"].tolist()
+    keys = [*vaccReadiness]
+    youngestRefuser = ages[keys[0]]
+
+    # create a list of the start indices
+    indices = [ages[i] for i in keys]
+
+    # get number of people, change the percentage to a number
+    refusers = [int((100 - vaccReadiness[keys[i]]) * (N / 100)) for i in range((len(indices)))]
+    total = int(sum(refusers))
+    # as long as there are people that refuse the vaccine we do the following
+    while(total > 0):
+        index = random.choice(range(youngestRefuser, N - 1))
+        while(population.people[index].dontVaccme):
+            index = random.choice(range(youngestRefuser, N - 1))
+        age = population.people[index].age
+        # find out if we can still let people of this age refuse
+        list = [x for x in keys if x < age]
+        try:
+            if refusers[len(list) - 1] > 0:
+                # lower list of refusers
+                refusers[len(list) - 1] -= 1
+                total -= 1
+                population.people[index].dontVaccme = True
+        except:
+            pass
+
+        # give the rest of the household a certain change to also refuse the vaccine
+        id = population.people[index].household
+        if(id > 0):
+            # get all the ids of people in the household
+            for i in population.houseDict[id].ids :
+                if random.uniform(0,1) < chanceToRefuse:
+                    # if they already refuse a vaccine nothing changes, if not they now refuse one
+                    if(not population.people[i].dontVaccme):
+                        # find out if we can still let people of this age refuse
+                        list = [x for x in indices if x < age]
+                        try:
+                            if refusers[len(list) - 1] > 0:
+                                population.people[i].dontVaccme = True
+                                refusers[len(list) - 1] -= 1
+                                total -=1
+                        except:
+                            pass
+    return population
+
+
+def reconstruct_vaccination(files, data, population):
+    "This function will reconstruct the vaccination of people in the past 6 months"
+    previouslyVaccinated = readVacciation(files["previouslyVaccinated"])
+    ages = data["Start of age group"].tolist()
+
+    # percentage of people of an age group that is already vaccinated
+    alreadyVaccinated = [0 for i in range(len(previouslyVaccinated.index))]
+
+    # list with all indices of the startages
+    indices = []
+    indices.append(ages[12])
+    for i in range(1,16) :
+        age = 2022 - int(previouslyVaccinated["age"][i][0:4])
+        indices.append(ages[age])
+
+    # we loop through all the weeks we have data off to see how many people
+    # have gotten vaccinated in that week
+    time = len(previouslyVaccinated.columns)
+    week = 1
+    gevaccineerd = 0
+    #listOfNubers = []
+    while (week < time):
+        weeklyData = previouslyVaccinated[week]
+        week += 1
+
+        # now we vaccinate in proportion to the data
+        for i in range(1,len(previouslyVaccinated.index)) :
+            index, currentRange = getIndex(indices,i)
+            # number of people we are going to vaccinate
+            next = weeklyData[i] - alreadyVaccinated[i]
+            number = int(next*(currentRange/N*1000))
+            if number > 0:
+                for j in range(number) :
+                    # we keep trying to pick a new index until we found someone who
+                    # has not been vaccinated yet and vaccinate that person
+                    while(population.people[index].vaccinated != 0) :
+                        index, x = getIndex(indices,i)
+                    population.people[index].vaccinated = 1
+                    gevaccineerd += 1
+                    population.people[index].weekOfVaccination = week
+        alreadyVaccinated = previouslyVaccinated[week-1]
+        #listOfNubers.append(gevaccineerd/N*100)
+
+    return population
+
+
+def getIndex(indices, i):
+    """This function takes a list of indices indicating the start of
+    an age group, a start age and returns an index of someone within the range
+    of people with a certain age."""
+    if i == 1:
+        begin = 0
+    else:
+        begin = indices[i - 1]
+    if i == 16:
+        end = 100000
+    else:
+        end = indices[i]
+    index = random.choice(range(begin, end))
+    return index, end-begin
+
+
+def initialiseInfections(data, population, tracker):
+    """This function reconstructs 2 weeks of infections. This is part
+    of the preprocessing."""
+
+    infections = [10, 15, 20, 15, 10, 15, 20, 15, 10, 15, 20, 15, 10, 15, 20, 15, 10, 15, 20, 15, ]
+
+    for week in range(len(infections)):
+        infected = 0
+        status_changes = tracker.empty_changes()
+        while (infections[week] > 0):
+            index = random.choice(range(3000, N - 1))
+            while (population.people[index].susceptible == 0):
+                index = random.choice(range(3000, N - 1))
+            population.people[index].daysSinceInfection = 1
+            infections[week] -= 1
+            infected += 1
+
+        population, changes = update(data['IFR'], population, status_changes)
+
+        # update the tracker
+        tracker.update_statistics(changes)
+    return population
+
+
+def preprocessing(population, files, data, tracker):
+    """In this function we do the preprocessing that has to be done before we
+    can start simulating. This consists of letting a percentage of the people
+    refuse a vaccine, giving a percentage of the population a vaccine and
+    reconstructing the infections that happened 14 timesteps prior to starting the
+    simulation. """
+
+    newpopulation = refuseVaccination(population, data)
+    vaccinatedPopulation = reconstruct_vaccination(files, data, newpopulation)
+    infectedPopulation = initialiseInfections(data, vaccinatedPopulation, tracker)
+    return infectedPopulation, tracker
+
 
 def run_model(population, data, contact_matrix, tracker, timesteps, start_vaccination=0):
     """ This function simulates infections for a given number of days given by the input timesteps.
@@ -492,8 +523,11 @@ def model(filenames, type, timesteps):
     # update the dataframe
     tracker.update_statistics(tracker_changes)
 
+    # preprocessing
+    newPopulation, tracker = preprocessing(currentPopulation, filenames, data, tracker)
+
     # Run the model
-    tracker = run_model(currentPopulation, data, contact_matrix, tracker, timesteps - 1, 0)
+    tracker = run_model(newPopulation, data, contact_matrix, tracker, timesteps - 1, 0)
 
     return tracker
 

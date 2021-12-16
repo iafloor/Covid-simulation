@@ -7,6 +7,10 @@ N = 100000  # number of persons in the network,
 ENCOUNTERS = 10
 P_ENCOUNTER = 0.0005
 
+# willingness for a vaccine based on data found on https://www.rivm.nl/gedragsonderzoek/maatregelen-welbevinden/vaccinatie
+# we save this in a dictionary with as key the starting age of the group with the willingness of the value in percentage
+vaccReadiness = {16: 91.6, 25: 90.6, 40: 92.9, 55: 96.9, 70: 98.7}
+chanceToRefuse = 0.8
 #
 STARTGROUP = [0, 4, 12, 18, 25, 35, 45, 55, 65, 75]
 # Willingness to take the vaccine if offered
