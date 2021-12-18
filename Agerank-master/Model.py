@@ -77,7 +77,7 @@ def initialise_model(files, order_type, tracker_changes):
 
     # adding people to the population
     print("Creating people.")
-    currentPopulation = create_people(currentPopulation, N, data, Vacc_readiness)
+    currentPopulation = create_people(currentPopulation, N, data)
 
     # create households
     print("Creating households")
@@ -268,10 +268,6 @@ def update(fatality, population, status_changes):
                 population.people[id].recovered = 1
                 new_status_changes["recovered"] += 1
                 new_status_changes["currently infected"] += -1
-
-        # update the population
-        # id = person.person_id
-        # population.people[id] = person
 
     return population, new_status_changes
 

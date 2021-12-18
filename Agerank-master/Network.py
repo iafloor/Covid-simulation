@@ -18,8 +18,12 @@ def how_many_children(available_children):
         numberOfChildren = random.choice((range(0,maxNumberOfChildren)))
     return numberOfChildren
 
-
-def createCouples(population, couples, childrenless, childDist):
+def createCouples(population, couples, childless, childDist):
+    """This function creates the couples living in a household.
+    We take two random people and add children if they should not be
+    childless. This function gets a list of the ages of the couples, a bool
+    childless which is true if they do not have children and a childDist which
+    is the distribution of the age of children."""
     # rounding off error?
     if childDist != 0 :
         numberOfCouples = int(min(sum(couples)/2, sum(childDist)))
@@ -61,7 +65,7 @@ def createCouples(population, couples, childrenless, childDist):
             availableAges.pop(abs(age2))  # ages start at 19
 
         # if they are parents living with kids, we add them
-        if childrenless :
+        if childless :
             population = addToHousehold(population, members)
         else :
             population, members, childDist = addChildren(population, members, childDist)
@@ -72,6 +76,9 @@ def createCouples(population, couples, childrenless, childDist):
 
 
 def addToHousehold(population, members) :
+    """This function takes a list of members and the population, adds
+    the members to a house and then add that house to the list of households
+    saved in the population."""
     # create a new household
     id = population.createdHouses
     house = household(id, len(members), [])
@@ -113,6 +120,9 @@ def addChildren(population, members, childDist) :
 
 
 def oneParentHousehold(population, oneParentDist):
+    """This function chooses people for the households containing one parent and
+    a number of children. It takes the population in which the household will be
+    saved and the distribution of the children's ages as input."""
     # one parent households
     for parent in range(sum(oneParentDist)):
         members = []
@@ -122,7 +132,7 @@ def oneParentHousehold(population, oneParentDist):
             age = random.choice(range(35)) + 20
         members.append(population.ageDist[age].pop())
 
-        # and add create the numberOfChildren wanted
+        # add the numberOfChildren wanted and add the the house to the household
         population, members, oneParentDist = addChildren(population, members, oneParentDist)
         population = addToHousehold(population, members)
 
@@ -130,9 +140,10 @@ def oneParentHousehold(population, oneParentDist):
 
 
 def fillHousehold(number, population, lowerLimitAge, upperLimitAge, minMembers, maxMembers) :
-    """In this definition we fill a list of members of a houshold and add them later to the list of households"""
-
-
+    """In this definition we fill a list of members of a houshold and add them later to the list of households.
+    We add a random number between minMembers and maxMembers of people to the household. The ages of the
+    people are between the lowerlimitAge and the upperLimitAge. This function is used to fill the retirement homes
+    and the student houses."""
     # while there are still people to be put into households
     while (number > 0):
         members = []
@@ -170,6 +181,8 @@ def retirementHousehold(population) :
 
 
 def make_households(population, file1, file2, file3):
+    """This function reads in the data about the people in the population and then creates different
+    households based on this information. """
 
     # read in data from files 
     makeup_data = read_makeup_households(file1)
@@ -220,6 +233,9 @@ def make_households(population, file1, file2, file3):
 
 
 def otherHouseholds(population) :
+    """"This function adds all the popele that have not been assigned to a household
+    yet to a household. First we filter all of the people that are living alone out of the list.
+    We do not put those people in a household."""
     # fill all people living alone
     for person in range(int(LIVINGALONE*N/100)) :
         getIndex = random.choice(range(105))
@@ -250,7 +266,11 @@ def otherHouseholds(population) :
     return population
 
 
-def create_people(population, N, dataframe, vaccinationreadiness) :
+def create_people(population, N, dataframe) :
+    """This function creates all the people that will be living in the population.
+    We add them to agegroups to easily find people in a certain age when filling hosueholds. We
+    add them to a dataframe to be able to create the contact matrix later."""
+
     # read in file with age distrubution
     startage = dataframe["Start of age group"].tolist()
     # we will store the people in lists per age in the following list
@@ -274,8 +294,6 @@ def create_people(population, N, dataframe, vaccinationreadiness) :
 
     # one long list (used for vaccinating ie)
     population.people = [item for sublist in people for item in sublist]
-
-    # todo add willingness to get vaccinated
 
     return population
 

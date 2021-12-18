@@ -17,7 +17,7 @@ STARTGROUP = [0, 4, 12, 18, 25, 35, 45, 55, 65, 75]
 Vacc_readiness = 0.85
 # Probability parameters (0 <= P <= 1 must hold)
 P0 = 0.003  # probability of infection at time 0
-P_MEETING = 0.004  # probability of meeting a contact on a given day
+P_MEETING = 0.02  # probability of meeting a contact on a given day
 # and becoming infected.
 # A base value in a non lockdown situation would be 0.02,
 # assuming that 10% of daily meetings results in an infection
@@ -48,7 +48,7 @@ P_TRANSMIT1 = 0.25  # probability of getting infected by a transmitter
 NDAYS_VACC = 28  # number of days to wait after recovery before vaccinating
 NDAYS_TRANSMIT = 5  # number of days a vaccinated person can transmit the disease
 # assumed only short period, being an asymptomatic infection
-DAY_SYMPTOMS = 6  # first day of showing symptoms, and decision day
+DAY_SYMPTOMS = 2  # first day of showing symptoms, and decision day
 # of going into quarantine
 DAY_RECOVERY = 13  # day of possible recovery, or hospitalisation
 DAY_RELEASE = 20  # day of release from hospital, or death
