@@ -2,12 +2,9 @@ import pandas as pd
 import numpy as np
 import os
 from Datasets import filenames_dictionary
-from Model import model
+from Model import create_model
+from Parameters import *
 
-from Parameters import parameter
-
-# timesteps to simulate the model for
-timesteps = 300
 # the amout of times the same model has to be ran
 k = 1
 # the type of order for the vaccination
@@ -19,7 +16,7 @@ file_names = {1: "Old_young", 2: "Young_old", 3: "Danish", 4: "Custom"}
 filenames = filenames_dictionary()
 
 for vacc_order in vaccination_orders:
-    results = model(filenames, vacc_order, timesteps)
+    results = create_model(filenames, vacc_order, time)
     file_name1 = str(file_names[vacc_order]) + "_" + str(0) + ".csv"
     file_name_2 = os.path.join("Results", file_name1)
     results.data.to_csv(file_name_2)
@@ -27,7 +24,7 @@ for vacc_order in vaccination_orders:
     results_total = results.data
 
     for i in range(1, k):
-        results = model(filenames, vacc_order, timesteps)
+        results = create_model(filenames, vacc_order, time)
 
         file_name1 = str(file_names[vacc_order]) + "_" + str(i) + ".csv"
         file_name_2 = os.path.join("Results", file_name1)

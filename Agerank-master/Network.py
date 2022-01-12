@@ -241,7 +241,9 @@ def otherHouseholds(population) :
         getIndex = random.choice(range(105))
         while(len(population.ageDist[getIndex]) < 1) :
             getIndex = random.choice(range(105))
-        population.ageDist[getIndex].pop()
+        p = population.ageDist[getIndex].pop()
+        index = p.person_id
+        population.people[index].household = -1
 
     # calculate how many people there are left
     k = 0

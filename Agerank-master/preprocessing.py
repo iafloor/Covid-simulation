@@ -2,8 +2,94 @@ from Network import *
 from Read_data import *
 from Classes import *
 from Parameters import *
-from Model import update
-# preprocessing functions
+
+
+def update(fatality, population, status_changes):
+    """This function updates the status and increments the number
+    of days that a person has been infected.
+    For a new infection, days[i]=1.  For uninfected persons, days[i]=0.
+    Input: infection fatality rate and age of persons i
+    """
+    new_status_changes = status_changes
+    people = population.people
+    for person in people:
+        id = person.person_id
+        if person.daysSinceInfection > 0 :
+            if person.daysSinceInfection == 1 :
+                new_status_changes["currently infected"] += 1
+                new_status_changes["total infected"] += 1
+                population.people[id].susceptible = 0
+            population.people[id].daysSinceInfection += 1
+
+        # on the day symptoms should be noticable we check if someone goes into quarantine
+        # if someone does not go in quarantine because they don't want to, they don't know
+        # that they have COVID or for other reasons, they stay in their household.
+        # for this it doesn't matter if they have or do not have symptoms
+        if person.daysSinceInfection == DAY_SYMPTOMS :
+            if rd.random() < P_QUARANTINE:
+                # i gets symptoms and quarantines
+                population.people[id].quarantined = 1
+                new_status_changes["quarantined"] += 1
+            else:
+                # i gets symptoms but does not quarantine
+                houseID = population.people[id].household
+                population.houseDict[houseID].infected += 1
+                population.people[id].infectious += 1
+
+        # on the recovery day of a person we check if they recover or if they get admitted to the hospital
+        # when they are hospitalised we change their status based on if they had been quarantined.
+        if person.daysSinceInfection == DAY_RECOVERY :
+            if rd.random() < RATIO_HF * fatality[person.age]:
+                population.people[id].hospitalised = 1
+                if person.quarantined != 1 :
+                    population.people[id].infectious -= 1
+                    houseId = person.household
+                    population.houseDict[houseId].infected -= 1
+                    schoolId = person.schoolClass
+                    if schoolId > -1 :
+                        population.otherGroups[schoolId].infected -= 1
+                else :
+                    population.people[id].quarantined -= 1
+                population.people[id].hospitalised += 1
+                new_status_changes["hospitalized"] += 1
+                new_status_changes["quarantined"] -= 1
+            else:
+                population.people[id].infectious = 0
+                population.people[id].quarantined = 0
+                population.people[id].daysSinceInfection = 0
+                population.people[id].daysSinceRecovery = 1
+                population.people[id].recovered = 1
+                new_status_changes["recovered"] += 1
+                new_status_changes["currently infected"] -= 1
+
+        # on the day of release of someone who has been hospitalised, they have a chance of dying
+        if person.daysSinceInfection == DAY_RELEASE:
+            new_status_changes["hospitalized"] -= 1
+            population.people[id].hospitalised = 0
+            if rd.random() < 1 / RATIO_HF:
+                population.people[id].infectious = 0
+                population.people[id].quarantined = 0
+                population.people[id].daysSinceInfection = 0
+                population.people[id].deceased = 1
+                new_status_changes["deceased"] += 1
+                new_status_changes["currently infected"] -= 1
+            else:
+                population.people[id].infectious = 0
+                population.people[id].quarantined = 0
+                population.people[id].daysSinceInfection = 0
+                population.people[id].recovered += 1
+                population.people[id].daysSinceRecovery = 1
+                new_status_changes["recovered"] += 1
+                new_status_changes["currently infected"] += -1
+        if person.daysSinceRecovery > 0 :
+            if person.daysSinceRecovery == protectionInfection :
+                population.people[id].susceptible = 1
+                population.people[id].daysSinceRecovery = 0
+            else :
+                population.people[id].daysSinceRecovery += 1
+    return population, new_status_changes
+
+
 def refuseVaccination(population, dataframe):
     """This function handles creating vaccine refusers. When someone in a household
     refuses  a vaccine, the rest of the household has a higher change to refuse a
@@ -77,7 +163,6 @@ def reconstruct_vaccination(files, data, population):
     time = len(previouslyVaccinated.columns)
     week = 1
     gevaccineerd = 0
-    #listOfNubers = []
     while (week < time):
         weeklyData = previouslyVaccinated[week]
         week += 1
@@ -98,7 +183,6 @@ def reconstruct_vaccination(files, data, population):
                     gevaccineerd += 1
                     population.people[index].weekOfVaccination = week
         alreadyVaccinated = previouslyVaccinated[week-1]
-        #listOfNubers.append(gevaccineerd/N*100)
 
     return population
 
@@ -112,7 +196,7 @@ def getIndex(indices, i):
     else:
         begin = indices[i - 1]
     if i == 16:
-        end = 100000
+        end = N
     else:
         end = indices[i]
     index = random.choice(range(begin, end))
@@ -120,12 +204,12 @@ def getIndex(indices, i):
 
 
 def initialiseInfections(data, population, tracker):
-    """This function reconstructs 2 weeks of infections. This is part
+    """This function reconstructs a week of infections. This is part
     of the preprocessing."""
 
     infections = [10, 15, 20, 15, 10, 15, 20, 15, 10, 15, 20, 15, 10, 15, 20, 15, 10, 15, 20, 15, ]
 
-    for week in range(len(infections)):
+    for week in range(7):
         infected = 0
         status_changes = tracker.empty_changes()
         while (infections[week] > 0):
@@ -143,6 +227,15 @@ def initialiseInfections(data, population, tracker):
     return population
 
 
+def VaccinationEffectiveness():
+    list = []
+    weeks = int(time / 7) + 50
+    for t in range(weeks):
+        list.append(begin*(growFactor**t))
+    print(list)
+    return list
+
+
 def preprocessing(population, files, data, tracker):
     """In this function we do the preprocessing that has to be done before we
     can start simulating. This consists of letting a percentage of the people
@@ -153,4 +246,5 @@ def preprocessing(population, files, data, tracker):
     newpopulation = refuseVaccination(population, data)
     vaccinatedPopulation = reconstruct_vaccination(files, data, newpopulation)
     infectedPopulation = initialiseInfections(data, vaccinatedPopulation, tracker)
-    return infectedPopulation, tracker
+    vaccEffectivenessList = VaccinationEffectiveness()
+    return infectedPopulation, tracker, vaccEffectivenessList

@@ -3,18 +3,21 @@ from Classes import *
 from Parameters import *
 # functions to vaccinate people
 
-def boosters(population, number, startage, week):
+def boosters(population, startage, week):
     """In this function we give a number of people a boostervaccine. The vaccines
     are distrubted from oldest to youngest and you can only get a boostervaccine
     if you have already been vaccinated before. We update the week of vaccination
     to the current week and use a parameter startage which keeps track of where
     we left vaccinating the previous day."""
-
-    for i in range(number):
+    numberOfBoosters = int(boostersGiven*N)
+    for i in range(numberOfBoosters):
         # if the person has not been vaccinated, we skip them
-        while population.people[startage].weekOfVaccination < 0 :
+        while population.people[int(startage)].weekOfVaccination < 0 or population.people[int(startage)].daysSinceRecovery != 0 or week - population.people[int(startage)].weekOfVaccination < 12:
             startage -= 1
+            if startage < 1 :
+                return population, N-1
         population.people[startage].weekOfVaccination = week
+        return population, startage
 
 
 def vaccinateKids(population, number, week):

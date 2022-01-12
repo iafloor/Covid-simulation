@@ -154,6 +154,7 @@ class person(object):
         self.vaccinated = 0
         self.transmitter = 0
         self.deceased = 0
+        self.daysSinceRecovery = 0
 
     def overestimation(self, inp):
         if inp in self.overestimate.keys():

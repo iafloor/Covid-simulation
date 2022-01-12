@@ -2,7 +2,6 @@ import pandas as pd
 import os
 from Model import *
 from Classes import track_statistics
-from Parameters import parameter
 
 
 from bokeh.plotting import figure, output_file, show, ColumnDataSource

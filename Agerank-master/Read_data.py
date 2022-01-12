@@ -185,6 +185,7 @@ def determine_age_distribution(dataframe):
         fraction = partial_sum / total
         start_age[k] = math.floor(fraction * N)
         partial_sum += dataframe["Number of people"][k]  # psum = number of persons aged <= k
+    start_age[-1] = N
     return start_age
 
 

@@ -1,7 +1,12 @@
 # Main input parameters of the simulation, you may want to vary these.
-N = 100000  # number of persons in the network,
+N = 1000000  # number of persons in the network,
+time = 100 # timesteps in the simulation, this number is only used for preprocessing
 # a trade-off between accuracy and speed
 
+# measures
+twoG = True # the 2G measure decreasing the number of contacts nonvaccinated people have
+booster = False  # True if we are boostering people
+vaccChildren = False # True if we vaccinate children
 
 # For the following parameters choose sensible values, as realistic as possible.
 ENCOUNTERS = 10
@@ -10,14 +15,19 @@ P_ENCOUNTER = 0.0005
 # willingness for a vaccine based on data found on https://www.rivm.nl/gedragsonderzoek/maatregelen-welbevinden/vaccinatie
 # we save this in a dictionary with as key the starting age of the group with the willingness of the value in percentage
 vaccReadiness = {16: 91.6, 25: 90.6, 40: 92.9, 55: 96.9, 70: 98.7}
-chanceToRefuse = 0.8
+chanceToRefuse = 0.8 # I don't think we do anything with this
+growFactor = 1.06
+begin = 0.13
+protectionInfection = 28 # based on not much
+boostersGiven = 0.0029 # based on the 0.29% people getting a booster shot each day
 #
 STARTGROUP = [0, 4, 12, 18, 25, 35, 45, 55, 65, 75]
 # Willingness to take the vaccine if offered
 Vacc_readiness = 0.85
 # Probability parameters (0 <= P <= 1 must hold)
 P0 = 0.003  # probability of infection at time 0
-P_MEETING = 0.02  # probability of meeting a contact on a given day
+P_MEETING = 0.02
+# probability of meeting a contact on a given day
 # and becoming infected.
 # A base value in a non lockdown situation would be 0.02,
 # assuming that 10% of daily meetings results in an infection
@@ -79,10 +89,6 @@ RATIO_HF = 3    # ratio between number of admissions to the hospital
                 # of hospitalisation has been modelled through the fatality rate.
 
 
-# vaccination parameters
-# 2 vaccinaties met 28 dagen ertussen
-# 
-
 # parameters for creating groups
 KIDSINGROUP = 23 # based on the average number of kids in a class in primary school in 2018 in the Netherlands
                  # for high school the numbers differ per educational attainment. The averages are at lest 13 and at most 26. I have choosen to 
@@ -96,7 +102,7 @@ RETIREMENT = 0.67       # number of people living in a retirement home
 PEOPLEINRETIREMENT = 48 # based on the 115,000 people living in retirement houses and the 2373 retirement houses
                         # in the Netherlands
 LIVINGALONE = 17.7      # percentage based on cbs
-
+"""
 def parameter():
     return {"N": N,
             "ENCOUNTERS": ENCOUNTERS,
@@ -129,4 +135,4 @@ def parameter():
             "VACCINATED": 6,
             "TRANSMITTER": 7,  # infectious after being vaccinated or having recovered
             "DECEASED": 8
-            }
+            }"""

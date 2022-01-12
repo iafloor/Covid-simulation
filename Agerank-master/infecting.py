@@ -1,9 +1,9 @@
 from Read_data import *
 from Classes import *
 from Parameters import *
-# infecting people
+import random as rd
 
-def infectChance(time, population, person) :
+def infectChance(population, person) :
     """ This function calculates the chance that someone will get infect based
     on the infections in their innercircle. This chance is base on:
     - how many people in their household are infected
@@ -15,14 +15,6 @@ def infectChance(time, population, person) :
     # if cohab or classmate is sick, chance increases
     chance += cohabIsSick(population, person)
     chance += classmateIsSick(population, person)
-
-    # if persen is vaccinated chance lowers but protection decreases over time
-    if chance > 0:
-        if person.vaccinated :
-            chance *= prevVaccinated(time, person)
-        else :
-            chance = 10
-
     return chance
 
 
@@ -42,16 +34,14 @@ def classmateIsSick(population, person):
     chance = 0
     if(id > -1) :   # a person has id -1 if they're not in a class
         if(population.schoolGroup[id].infected > 0):
-            chance = 20
+            chance = 10
     return chance
 
 
-def prevVaccinated(time, person):
-    # this function calculates how long ago someone has been vaccinated
-    # according to research the protection of a vaccine decreases over time
-    vaccInWeek = person.weekOfVaccination
-    timeSinceVacc = int(time/7) - vaccInWeek
-    return 20 + 5*timeSinceVacc
+def prevVaccinated(time, person, vaccEffectiveness):
+    # this function calculates how long ago someone has been vaccinated and how effective the
+    # vaccine still is they have gotten
+    return vaccEffectiveness[int(time/7) - person.weekOfVaccination]
 
 
 def infect_standard(network, population):
@@ -81,6 +71,10 @@ def infect_standard(network, population):
         # incorporate the daily probability of meeting a contact
         # taking into account the possibility of being infected twice
 
+        # if someone is not vaccinated, they only see their housemates and classmates
+        if twoG :
+            if person.vaccinated == 0:
+                continue
         if y[person.person_id] > 0:
             r = rd.random()
             if y[person.person_id] == 1:
