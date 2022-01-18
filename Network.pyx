@@ -7,6 +7,7 @@ from Classes import *
 from Parameters import *
 
 
+
 def how_many_children(available_children):
     # calculates how many children a family has. We check the maximum and choose a random number,
     # if there are still households needed with that many kids we're done, else we choose another number
@@ -289,49 +290,30 @@ def create_people(population, N, dataframe) :
     # starting with age 0, we start adding people until we have enough people of a certain age and then continue to the next age
     for i in range(N):
         if(i < startage[currentAge+1]) :
-            p.person_id = i
             p.age = currentAge
-            # we need to assign values to all variables of person
-            p.daysSinceInfection = 0
-            p.weekOfVaccination = -1
-            p.household = -1
-            p.infectious = 0
-            p.susceptible = 1
-            p.quarantined = 0
-            p.hospitalised = 0
-            p.recovered = 0
-            p.vaccinated = 0
-            p.deceased = 0
-            p.vaccinationReadiness = 0
-            p.dontVaccme = 0
-            p.infectionProtected = 0
-            p.schoolClass = -1
-            p.daysSinceRecovery = 0
-            people[currentAge].append(p)
-            dataframe.loc[currentAge, 'Age group class object'].members.append(p)
         else :  
             currentAge += 1
             people.append([])
-            p.person_id = i
             p.age = currentAge
-            # we need to assign values to all variables of person
-            p.daysSinceInfection = 0
-            p.weekOfVaccination = -1
-            p.household = -1
-            p.infectious = 0
-            p.susceptible = 1
-            p.quarantined = 0
-            p.hospitalised = 0
-            p.recovered = 0
-            p.vaccinated = 0
-            p.deceased = 0
-            p.vaccinationReadiness = 0
-            p.dontVaccme = 0
-            p.infectionProtected = 0
-            p.schoolClass = -1
-            p.daysSinceRecovery = 0
-            people[currentAge].append(p)
-            dataframe.loc[currentAge, 'Age group class object'].members.append(p)
+        p.person_id = i
+        # we need to assign values to all variables of person
+        p.daysSinceInfection = 0
+        p.weekOfVaccination = -1
+        p.household = -1
+        p.infectious = 0
+        p.susceptible = 1
+        p.quarantined = 0
+        p.hospitalised = 0
+        p.recovered = 0
+        p.vaccinated = 0
+        p.deceased = 0
+        p.vaccinationReadiness = 0
+        p.dontVaccme = 0
+        p.infectionProtected = 0
+        p.schoolClass = -1
+        p.daysSinceRecovery = 0
+        people[currentAge].append(p)
+        dataframe.loc[currentAge, 'Age group class object'].members.append(p)
 
     population.ageDist = people
 

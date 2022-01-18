@@ -1,48 +1,46 @@
 # Main input parameters of the simulation, you may want to vary these.
-N = 100000  # number of persons in the network,
-time  = 100
+N = 100000  # number of persons in the network,ergonomisch
+time  = 300
 # a trade-off between accuracy and speed
 
 
 
 # measures
-lockdown = False
-twoG = False
-booster = False
-vaccCHildren = False
+lockdown = False # boolean that is False we there is no lockdown measure, and True when there is
+twoG = True  # boolean that is True when we consider a 2G situation
+booster = True # boolean that is True when we give people booster vaccines
+vaccCHildren = False # boolean that is True when we vaccinated children under 12
 
-vaccReadiness = {16: 91.6, 25: 90.6, 40: 92.9, 55: 96.9, 70: 98.7}
+vaccReadiness = {16: 91.6, 25: 90.6, 40: 92.9, 55: 96.9, 70: 98.7} # Readiness for a vaccination per age group. The key in this dictionary is the startage for a certain group with the vaccination readiness of the value. The numbers are based on the vacciantion readiness in the Netherlands during the last quarter of 2021
+#based on data found on https://www.rivm.nl/gedragsonderzoek/maatregelen-welbevinden/vaccinatie
 chanceToRefuse = 0.8 # I don't think we do anything with this
-growFactor = 1.06
-begin = 0.13
+growFactor = 1.06 # used for the protection from vaccination. Factor with which the vaccine increases in being less protective
+begin = 0.13 # used for the protection from vaccination. change to get infected within a week after getting the vaccine. (compared to when you would have a 100% chance to get infected with Covid)
 protectionInfection = 42 # based on not much
 boostersGiven = 0.016 # based on the 1.6% people getting a booster shot each day
-initProtect = 0.0029 # based on the 50.000 infections every week in the Netherlands
+initProtect = 0.02 # based on the 50.000 infections every week in the Netherlands
 # For the following parameters choose sensible values, as realistic as possible.
-vaccinationsGiven = 0.004 # based on the 0.04% people getting a vaccine every day
-infectPeopleRandom = 10 # every day we infect 10 random people with ages between 12 and 60
+vaccinationsGiven = 0.002 # based on the 0.04% people getting a vaccine every day
+infectPeopleRandom = int(0.0001*N)# every day we infect 10 random people with ages between 12 and 60
 ENCOUNTERS = 10
 P_ENCOUNTER = 0.0005
 
-# willingness for a vaccine based on data found on https://www.rivm.nl/gedragsonderzoek/maatregelen-welbevinden/vaccinatie
-# we save this in a dictionary with as key the starting age of the group with the willingness of the value in percentage
-vaccReadiness = {16: 91.6, 25: 90.6, 40: 92.9, 55: 96.9, 70: 98.7}
 chanceToRefuse = 0.8
 #
 STARTGROUP = [0, 4, 12, 18, 25, 35, 45, 55, 65, 75]
 # Willingness to take the vaccine if offered
 Vacc_readiness = 0.85
-# Probhttps://web.whatsapp.com/%F0%9F%8C%90/nlability parameters (0 <= P <= 1 must hold)
+# Probability parameters (0 <= P <= 1 must hold)
 P0 = 0.003  # probability of infection at time 0
-P_MEETING = 0.004  # probability of meeting a contact on a given day
+P_MEETING = 0.01  # probability of meeting a contact on a given day
 # and becoming infected.
-# A base value in a non lockdown situation would be 0.02,
+# A base value in a non lockdown situation would be 0.01,
 # assuming that 10% of daily meetings results in an infection
 # and that the same person is met on average 6 times per month.
 # For the lockdown situation, this number has been reduced.
 # Here, an 80%-effective lockdown multiplies
 # P_MEETING by a further factor 0.2.
-P_QUARANTINE = 0.8  # probability of a person with symptoms going into
+P_QUARANTINE = 0.9  # probability of a person with symptoms going into
 # quarantine where the alternative is being symptomatic
 # and still infecting others. This takes into account
 # that some persons will quarantine only partially.

@@ -90,7 +90,9 @@ class track_statistics(object):
         self.data = pd.DataFrame(columns=["total infected",
                                           "new infected",
                                           "hospitalized",
-                                          "deceased"])
+                                          "deceased",
+                                          "vaccinated",
+                                          "nonvaccinated"])
 
     def update_statistics(self, tracker_changes):
         self.data.index.name = "timestep"
@@ -100,13 +102,17 @@ class track_statistics(object):
         dictionary = {"total infected": 0,
                       "new infected": 0,
                       "hospitalized": 0,
-                      "deceased": 0}
+                      "deceased": 0,
+                      "vaccinated":0,
+                      "nonvaccinated":0}
         return dictionary
 
     def empty_changes(self):
         dictionary = {"total infected": self.data["total infected"].iloc[-1],
                       "new infected": self.data["new infected"].iloc[-1],
                       "hospitalized": self.data["hospitalized"].iloc[-1],
+                      "deceased": self.data["deceased"].iloc[-1],
+                      "deceased": self.data["deceased"].iloc[-1],
                       "deceased": self.data["deceased"].iloc[-1]}
         return dictionary
 

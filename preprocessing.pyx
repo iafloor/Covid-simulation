@@ -4,123 +4,11 @@ from Classes import *
 from Parameters import *
 from vaccination import *
 from customTypes cimport person, changes
+from Model import simulation
 
 
 
-def update(fatality, listOfPeople, houseDictList, otherGroupsList, nchanges):
-    """This function updates the status and increments the number
-    of days that a person has been infected.
-    For a new infection, days[i]=1.  For uninfected persons, days[i]=0.
-    Input: infection fatality rate and age of persons i
-    """
-    # typing the variables
-    cdef person person
-    cdef list people = listOfPeople, houseDict = houseDictList, otherGroups = otherGroupsList
-    cdef int newinfections = 0, recovered = 0
-    cdef int id
-    nchanges["newInfections"] = 0
-    cdef int vaccinated = 0, nonvaccinated = 0
-    cdef int students = 0, youngadults = 0, parents = 0, old = 0
-    
-    for p in people:
-        person = p
-        id = person.person_id
-        if person.daysSinceInfection > 0 :
-            if person.daysSinceInfection == 1 :
-                nchanges["newInfections"] += 1
-                newinfections += 1
-                vaccinated += person.vaccinated
-                nonvaccinated += 1 - person.vaccinated 
-                nchanges["totalInfected"] += 1
-                person.susceptible = 0
-                person.infectionProtected = 1
-            person.daysSinceInfection += 1
-
-        # on the day symptoms should be noticable we check if someone goes into quarantine
-        # if someone does not go in quarantine because they don't want to, they don't know
-        # that they have COVID or for other reasons, they stay in their household.
-        # for this it doesn't matter if they have or do not have symptoms
-        if person.daysSinceInfection == DAY_SYMPTOMS :
-            if rd.random() < P_QUARANTINE:
-	            # i gets symptoms and quarantines
-                    person.quarantined = 1
-            else:
-	            # i gets symptoms but does not quarantine
-                    houseID = person.household
-                    houseDict[houseID].infected += 1
-                    person.infectious = 1
-                    schoolID = person.schoolClass
-                    if schoolID > -1 :
-                        otherGroups[schoolID].infected += 1
-  
-            # on the recovery day of a person we check if they recover or if they get admitted to the hospital
-            # when they are hospitalised we change their status based on if they had been quarantined.
-        elif person.daysSinceInfection == DAY_RECOVERY :
-                if rd.random() < RATIO_HF * fatality[person.age]:
-                    person.hospitalised = 1
-                    if person.quarantined != 1 :
-                        person.infectious -= 1
-                        houseId = person.household
-                        houseDict[houseId].infected -= 1
-                        schoolId = person.schoolClass
-                        if schoolId > -1 :
-                            otherGroups[schoolId].infected -= 1
-                    else :
-                        person.quarantined = 0
-                    person.hospitalised = 1
-                    nchanges["hospitalized"] += 1
-                else:
-                    if person.quarantined != 1 :
-                        houseID = person.household
-                        houseDict[houseID].infected -= 1
-                        schoolId = person.schoolClass
-                        if schoolId > -1:
-                            otherGroupes[schoolId].infected -= 1
-                    person.infectious = 0
-                    person.quarantined = 0
-                    person.daysSinceInfection = 0
-                    person.recovered = 1
-                    person.daysSinceRecovery = 1
-                    recovered += 1
-
-            # on the day of release of someone who has been hospitalised, they have a chance of dying
-        elif person.daysSinceInfection == DAY_RELEASE:
-                #nchanges["hospitalized"] -= 1
-                person.hospitalised = 0
-                if rd.random() < 1 / RATIO_HF:
-                    person.infectious = 0
-                    person.quarantined = 0
-                    person.daysSinceInfection = 0
-                    person.deceased = 1
-                    nchanges["deceased"] += 1
-                    recovered += 1
-                else:
-                    person.infectious = 0
-                    person.quarantined = 0
-                    person.daysSinceInfection = 0
-                    person.recovered = 1
-                    person.daysSinceRecovery = 1
-                    nchanges["hospitalized"] -= 1
-                    recovered += 1
-     
-        if person.daysSinceRecovery > 0 :
-            if person.daysSinceRecovery == 14 :
-                person.susceptible = 1
-            if person.daysSinceRecovery == protectionInfection :
-                person.infectionProtected = 0 
-                person.daysSinceRecovery = 0
-            else : person.daysSinceRecovery += 1
-        people[id] = person
-    #print(vaccinated)
-    #print(nonvaccinated)
-    #print("students", students)
-    #print("youngadults", youngadults)
-    #print("parents", parents)
-    #print("old",old)
-    return people, houseDict, otherGroups, nchanges
-    
-    
-def refuseVaccination(population, dataframe):
+cdef refuseVaccination(dataframe, sim):
     """This function handles creating vaccine refusers. When someone in a household
     refuses  a vaccine, the rest of the household has a higher change to refuse a
     vaccine too."""
@@ -139,10 +27,10 @@ def refuseVaccination(population, dataframe):
     # as long as there are people that refuse the vaccine we do the following
     while(total > 0):
         index = random.choice(range(youngestRefuser, N - 1))
-        p = population.people[index]
+        p = sim.people[index]
         while(p.dontVaccme):
             index = random.choice(range(youngestRefuser, N - 1))
-            p = population.people[index]
+            p = sim.people[index]
         age = p.age
         # find out if we can still let people of this age refuse
         list = [x for x in keys if x < age]
@@ -152,7 +40,7 @@ def refuseVaccination(population, dataframe):
                 refusers[len(list) - 1] -= 1
                 total -= 1
                 p.dontVaccme = True
-                population.people[index] = p
+                sim.people[index] = p
         except:
             pass
 
@@ -160,26 +48,27 @@ def refuseVaccination(population, dataframe):
         id = p.household
         if(id > 0):
             # get all the ids of people in the household
-            for i in population.houseDict[id].ids :
+            for i in sim.housedict[id].ids :
                 if random.uniform(0,1) < chanceToRefuse:
                     # if they already refuse a vaccine nothing changes, 
                     # if not they now refuse one
-                    if(not population.people[i]["dontVaccme"]):
+                    if(not sim.people[i]["dontVaccme"]):
                         # find out if we can still let people of this age refuse
                         list = [x for x in indices if x < age]
                         try:
                             if refusers[len(list) - 1] > 0:
-                                p = population.people[i] 
+                                p = sim.people[i] 
                                 p.dontVaccme = True
-                                population.people[i] = p
+                                sim.people[i] = p
                                 refusers[len(list) - 1] -= 1
                                 total -=1
                         except:
                             pass
-    return population
+                            
+    return sim
 
 
-def reconstruct_vaccination(files, data, population):
+cdef reconstruct_vaccination(files, data, sim):
     "This function will reconstruct the vaccination of people in the past 6 months"
     cdef person p
     previouslyVaccinated = readVacciation(files["previouslyVaccinated"])
@@ -210,26 +99,24 @@ def reconstruct_vaccination(files, data, population):
             index, currentRange = getIndex(indices,i)
             # number of people we are going to vaccinate
             next = weeklyData[i] - alreadyVaccinated[i]
-            number = int(next*(currentRange/N*1000))
+            number = int(next*0.01*(currentRange))
             if number > 0:
                 for j in range(number) :
                     # we keep trying to pick a new index until we found someone who
                     # has not been vaccinated yet and vaccinate that person
-                    p = population.people[index]
+                    p = sim.people[index]
                     while(p.vaccinated != 0) :
                         index, x = getIndex(indices,i)
-                        p = population.people[index]
+                        p = sim.people[index]
                     p.vaccinated = 1
                     gevaccineerd += 1
                     p.weekOfVaccination = week
-                    population.people[index] = p
+                    sim.people[index] = p
         alreadyVaccinated = previouslyVaccinated[week-1]
     print("procent gevaccineerd", gevaccineerd/N*100)
+    return sim
 
-    return population
-
-
-def getIndex(indices, i):
+cdef getIndex(list indices, int i):
     """This function takes a list of indices indicating the start of
     an age group, a start age and returns an index of someone within the range
     of people with a certain age."""
@@ -244,63 +131,49 @@ def getIndex(indices, i):
     index = random.choice(range(begin, end))
     return index, end-begin
     
-def initialiseProtection(population) :
+cdef initialiseProtection(sim) :
     """ this function gives a number of people protection for Covid per week based on the number 
     of people that are infected in the Netherlands on average in a week. This function is needed
     to prevent a peak in the beginning."""
     number = int(initProtect*N)
-    for i in range(1,4) :
+    for i in range(1,5) :
        for k in range(number) :
-           index = random.randint(0,N-1)
-           while population.people[index]["daysSinceRecovery"] == 0 and population.people[index]["susceptible"] == 1:
-               index = random.randint(0,N-1)
-           population.people[index]["daysSinceRecovery"]  = i*7
-    return population
+           index = random.choice(range(0,N-1))
+           while sim.people[index]["daysSinceRecovery"] > 1 or \
+                 sim.people[index]["susceptible"] == 0:
+               index = random.choice(range(0,N-1))
+           sim.people[index]["daysSinceRecovery"]  = i*7
+           sim.people[index]["infectionProtected"] = 1
+    return sim
 
 
-def initialiseInfections(data, population, tracker):
+cdef initialiseInfections(data, tracker, sim):
     """This function reconstructs 2 weeks of infections. This is part
     of the preprocessing."""
     
     # typing the variables
     cdef person p
-    cdef changes newchanges
-    cdef list people = population.people, houseDict = population.houseDict, otherGroups = population.otherGroups
     cdef int startage = N -1
     
     # initialize tracker
-    newchanges.newInfections = 0
-    newchanges.totalInfected = 0
-    newchanges.hospitalized = 0
-    newchanges.deceased = 0
     infections = [10, 15, 20, 15, 10, 15, 20, 15, 10, 15, 20, 15, 10, 15, 20, 15, 10, 15, 20, 15, ]
 
     # loop through the weeks and infect a number of people 
     for week in range(14):
         infected = 0
-        status_changes = tracker.empty_changes()
         while infections[week] > 0:
             index = random.choice(range(3000, N - 1))
-            p = people[index]
+            p = sim.people[index]
             while p.susceptible == 0:
                 index = random.choice(range(3000, N - 1))
-                p = people[index]
+                p = sim.people[index]
             p.daysSinceInfection = 1
-            people[index] = p
+            sim.people[index] = p
             infections[week] -= 1
             infected += 1
             
-        people, houseDict, otherGroups, changes = update(data['IFR'], people, houseDict, otherGroups, newchanges)
-        
-        
-        # inpakken
-        population.people = people
-        population.houseDict = houseDict
-        population.otherGroups = otherGroups
-
-        # update the tracker
-        tracker.update_statistics(changes)
-    return population
+        sim.update(data['IFR'])
+    return sim
 
 def VaccinationEffectiveness():
     list = []
@@ -309,19 +182,25 @@ def VaccinationEffectiveness():
         list.append(min(begin*(growFactor**t), 1))
     return list
 
-def preprocessing(population, files, data, tracker):
+def pmeetinglist():
+    list = []
+    for t in range(100):
+        p = 1 - (1 - P_MEETING) ** t 
+        list.append(p)
+    return list
+def preprocessing(files, data, sim):
     """In this function we do the preprocessing that has to be done before we
     can start simulating. This consists of letting a percentage of the people
     refuse a vaccine, giving a percentage of the population a vaccine and
     reconstructing the infections that happened 14 timesteps prior to starting the
     simulation. """
 
-    newpopulation = refuseVaccination(population, data)
-    vaccinatedPopulation = reconstruct_vaccination(files, data, newpopulation)
-    infectedPopulation = initialiseInfections(data, vaccinatedPopulation, tracker)
-    vaccEffectivenessList = VaccinationEffectiveness()
-    protectedPopulation = initialiseProtection(infectedPopulation)
-    return infectedPopulation, tracker, vaccEffectivenessList
+    sim = refuseVaccination(data, sim)
+    sim = reconstruct_vaccination(files, data, sim)
+    #sim = initialiseInfections(data, tracker, sim)
+    sim = initialiseProtection(sim)
+
+    return sim
 
 
     

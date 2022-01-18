@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 import os
+import threading
+from multiprocessing.dummy import Pool as ThreadPool
 from Datasets import filenames_dictionary
 from Model import model
 
@@ -26,7 +28,6 @@ def main():
 
 		for i in range(1, k):
 			results = model(filenames, vacc_order, time)
-
 			file_name1 = str(file_names[vacc_order]) + "_" + str(i) + ".csv"
 			file_name_2 = os.path.join("Results", file_name1)
 			results.data.to_csv(file_name_2)
